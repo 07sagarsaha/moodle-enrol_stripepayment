@@ -30,12 +30,6 @@ use core_external\external_function_parameters;
 use core_external\external_value;
 use core_external\external_single_structure;
 require_once("$CFG->libdir/enrollib.php");
-require_once('vendor/stripe/stripe-php/init.php');
-use Stripe\Stripe as Stripe;
-use Stripe\Coupon as Coupon;
-use Stripe\Customer as Customer;
-use Stripe\Checkout\Session as Session;
-use Stripe\PaymentIntent as PaymentIntent;
 
 /**
  * External library for stripepayment
@@ -46,6 +40,94 @@ use Stripe\PaymentIntent as PaymentIntent;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class moodle_enrol_stripepayment_external extends external_api {
+
+    private static function get_plugin() {
+        $plugin = enrol_get_plugin('stripepayment');
+        return $plugin;
+    }
+    /**
+     * Retrieve a coupon from Stripe
+     *
+     * @param string $couponid Coupon ID
+     * @param string $secretkey Stripe secret key
+     * @return array Coupon data
+     * @throws Exception
+     */
+    private static function retrieve_coupon($couponid, $secretkey) {
+        return self::get_plugin()->stripe_api_request('GET', 'coupons/' . $couponid, [], $secretkey);
+    }
+
+    /**
+     * Retrieve a customer from Stripe
+     *
+     * @param string $customerid Customer ID
+     * @param string $secretkey Stripe secret key
+     * @return array Customer data
+     * @throws Exception
+     */
+    private static function retrieve_customer($customerid, $secretkey) {
+        return self::get_plugin()->stripe_api_request('GET', 'customers/' . $customerid, [], $secretkey);
+    }
+
+    /**
+     * List customers by email
+     *
+     * @param string $email Customer email
+     * @param string $secretkey Stripe secret key
+     * @return array Customers list
+     * @throws Exception
+     */
+    private static function list_customers_by_email($email, $secretkey) {
+        return self::get_plugin()->stripe_api_request('GET', 'customers', ['email' => $email], $secretkey);
+    }
+
+    /**
+     * Create a customer in Stripe
+     *
+     * @param array $customerdata Customer data
+     * @param string $secretkey Stripe secret key
+     * @return array Created customer data
+     * @throws Exception
+     */
+    private static function create_customer($customerdata, $secretkey) {
+        return self::get_plugin()->stripe_api_request('POST', 'customers', $customerdata, $secretkey);
+    }
+
+    /**
+     * Create a checkout session
+     *
+     * @param array $sessiondata Session data
+     * @param string $secretkey Stripe secret key
+     * @return array Created session data
+     * @throws Exception
+     */
+    private static function create_checkout_session($sessiondata, $secretkey) {
+        return self::get_plugin()->stripe_api_request('POST', 'checkout/sessions', $sessiondata, $secretkey);
+    }
+
+    /**
+     * Retrieve a checkout session
+     *
+     * @param string $sessionid Session ID
+     * @param string $secretkey Stripe secret key
+     * @return array Session data
+     * @throws Exception
+     */
+    private static function retrieve_checkout_session($sessionid, $secretkey) {
+        return self::get_plugin()->stripe_api_request('GET', 'checkout/sessions/' . $sessionid, [], $secretkey);
+    }
+
+    /**
+     * Retrieve a payment intent
+     *
+     * @param string $paymentintentid Payment intent ID
+     * @param string $secretkey Stripe secret key
+     * @return array Payment intent data
+     * @throws Exception
+     */
+    private static function retrieve_payment_intent($paymentintentid, $secretkey) {
+        return self::get_plugin()->stripe_api_request('GET', 'payment_intents/' . $paymentintentid, [], $secretkey);
+    }
 
     /**
      * Parameter for couponsettings function
@@ -116,48 +198,46 @@ class moodle_enrol_stripepayment_external extends external_api {
         $currency = $plugininstance->currency ? $plugininstance->currency : 'USD';
         $cost = format_float($cost, 2, false);
 
-        Stripe::setApiKey($secretkey);
-
         $couponname = '';
         $coupontype = '';
         $discountvalue = 0;
         $discountamount = 0;
 
         try {
-            $coupon = Coupon::retrieve($couponid);
+            $coupon = self::retrieve_coupon($couponid, $secretkey);
 
             // Enhanced coupon validation.
-            if (!$coupon || !$coupon->valid) {
+            if (!$coupon || (isset($coupon['valid']) && !$coupon['valid'])) {
                 throw new Exception(get_string('invalidcoupon', 'enrol_stripepayment'));
             }
 
             // Check if coupon has expired.
-            if (isset($coupon->redeem_by) && $coupon->redeem_by < time()) {
+            if (isset($coupon['redeem_by']) && $coupon['redeem_by'] < time()) {
                 throw new Exception('Coupon has expired');
             }
 
             // Check if coupon has usage limits.
-            if (isset($coupon->max_redemptions) && isset($coupon->times_redeemed) &&
-                $coupon->times_redeemed >= $coupon->max_redemptions) {
+            if (isset($coupon['max_redemptions']) && isset($coupon['times_redeemed']) &&
+                $coupon['times_redeemed'] >= $coupon['max_redemptions']) {
                 throw new Exception('Coupon usage limit exceeded');
             }
 
-            $couponname = isset($coupon->name) ? $coupon->name : $couponid;
+            $couponname = isset($coupon['name']) ? $coupon['name'] : $couponid;
 
-            if (isset($coupon->percent_off)) {
-                $discountamount = $cost * ($coupon->percent_off / 100);
+            if (isset($coupon['percent_off'])) {
+                $discountamount = $cost * ($coupon['percent_off'] / 100);
                 $cost -= $discountamount;
                 $coupontype = 'percent_off';
-                $discountvalue = $coupon->percent_off;
-            } else if (isset($coupon->amount_off)) {
+                $discountvalue = $coupon['percent_off'];
+            } else if (isset($coupon['amount_off'])) {
                 // Ensure currency matches.
-                if (isset($coupon->currency) && strtoupper($coupon->currency) !== strtoupper($currency)) {
+                if (isset($coupon['currency']) && strtoupper($coupon['currency']) !== strtoupper($currency)) {
                     throw new Exception('Coupon currency does not match course currency');
                 }
-                $discountamount = $coupon->amount_off / 100;
+                $discountamount = $coupon['amount_off'] / 100;
                 $cost -= $discountamount;
                 $coupontype = 'amount_off';
-                $discountvalue = $coupon->amount_off / 100;
+                $discountvalue = $coupon['amount_off'] / 100;
             } else {
                 throw new Exception('Invalid coupon type');
             }
@@ -242,6 +322,7 @@ class moodle_enrol_stripepayment_external extends external_api {
 
         return true;
     }
+
     private static function send_message($course, $userfrom, $userto, $subject, $orderdetails, $shortname, $fullmessage, $fullmessagehtml) {
 
         $recipients = is_array($userto) ? $userto : [$userto];
@@ -435,8 +516,6 @@ class moodle_enrol_stripepayment_external extends external_api {
         if (empty($secretkey) || empty($courseid) || empty($amount) || empty($currency) || empty($description)) {
             redirect($CFG->wwwroot.'/course/view.php?id='.$courseid);
         } else {
-            // Set API key.
-            Stripe::setApiKey($secretkey);
             $response = [
                 'status' => 0,
                 'error' => [
@@ -450,8 +529,8 @@ class moodle_enrol_stripepayment_external extends external_api {
             if ($receiverid) {
                 try {
                     // Attempt to retrieve customer with the existing ID.
-                    Customer::retrieve($receiverid);
-                } catch (\Stripe\Exception\InvalidRequestException $e) {
+                    self::retrieve_customer($receiverid, $secretkey);
+                } catch (Exception $e) {
                     if (strpos($e->getMessage(), 'No such customer') !== false ||
                         strpos($e->getMessage(), 'You do not have access') !== false) {
                         // Customer doesn't exist or inaccessible with current API key.
@@ -464,15 +543,15 @@ class moodle_enrol_stripepayment_external extends external_api {
 
             if (!$receiverid) {
                 try {
-                    $customers = Customer::all(['email' => $user->email]);
-                    if (!empty($customers->data)) {
-                        $receiverid = $customers->data[0]->id;
+                    $customers = self::list_customers_by_email($user->email, $secretkey);
+                    if (!empty($customers['data'])) {
+                        $receiverid = $customers['data'][0]['id'];
                     } else {
-                        $newcustomer = Customer::create([
+                        $newcustomer = self::create_customer([
                             'email' => $user->email,
                             'name' => fullname($user),
-                        ]);
-                        $receiverid = $newcustomer->id;
+                        ], $secretkey);
+                        $receiverid = $newcustomer['id'];
                     }
 
                     if ($checkcustomer) {
@@ -486,7 +565,7 @@ class moodle_enrol_stripepayment_external extends external_api {
                             'timeupdated' => time()
                         ]);
                     }
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     return [
                         'status' => 0,
                         'error' => ['message' => 'Could not create customer in Stripe: ' . $e->getMessage()],
@@ -498,7 +577,7 @@ class moodle_enrol_stripepayment_external extends external_api {
             try {
                 $sessionparams = [
                     'customer' => $receiverid,
-                    'payment_intent_data' => ['description' => $description ],
+                    'payment_intent_data' => ['description' => $description],
                     'payment_method_types' => ['card'],
                     'line_items' => [[
                         'price_data' => [
@@ -531,14 +610,14 @@ class moodle_enrol_stripepayment_external extends external_api {
                     'cancel_url' => $CFG->wwwroot . '/course/view.php?id=' . $courseid,
                 ];
 
-                $session = Session::create($sessionparams);
+                $session = self::create_checkout_session($sessionparams, $secretkey);
             } catch (Exception $e) {
                 $apierror = $e->getMessage();
             }
             if (empty($apierror) && $session) {
                 $response = [
                     'status' => 'success',
-                    'redirecturl' => $session->url, // Stripe Checkout URL.
+                    'redirecturl' => $session['url'], // Stripe Checkout URL.
                     'error' => [],
                 ];
             } else {
@@ -553,6 +632,7 @@ class moodle_enrol_stripepayment_external extends external_api {
             return $response;
         }
     }
+
     /**
      * function for define parameter type for process_payment
      */
@@ -566,6 +646,7 @@ class moodle_enrol_stripepayment_external extends external_api {
             ]
         );
     }
+
     /**
      * function for define return type for process_payment
      */
@@ -589,28 +670,30 @@ class moodle_enrol_stripepayment_external extends external_api {
         $data = new stdClass();
         $plugin = enrol_get_plugin('stripepayment');
         $secretkey = $plugin->get_current_secret_key();
-        Stripe::setApiKey($secretkey);
-        $checkoutsession = Session::retrieve($sessionid);
+        
+        $checkoutsession = self::retrieve_checkout_session($sessionid, $secretkey);
 
         // For 100% discount, no payment_intent is created.
-        if (!empty($checkoutsession->payment_intent)) {
-            $charge = PaymentIntent::retrieve($checkoutsession->payment_intent);
-            $email = $charge->receipt_email;
-            $paymentstatus = $charge->status;
-            $txnid = $charge->id;
+        if (!empty($checkoutsession['payment_intent'])) {
+            $charge = self::retrieve_payment_intent($checkoutsession['payment_intent'], $secretkey);
+            $email = isset($charge['charges']['data'][0]['receipt_email']) ? 
+                     $charge['charges']['data'][0]['receipt_email'] : 
+                     ($checkoutsession['customer_details']['email'] ?? '');
+            $paymentstatus = $charge['status'];
+            $txnid = $charge['id'];
         } else {
             // Free checkout session (0 amount, no PaymentIntent).
             $charge = null;
-            $email = $checkoutsession->customer_details->email;
-            $paymentstatus = $checkoutsession->payment_status;
-            $txnid = $checkoutsession->id;
+            $email = $checkoutsession['customer_details']['email'] ?? '';
+            $paymentstatus = $checkoutsession['payment_status'];
+            $txnid = $checkoutsession['id'];
         }
 
         $data->couponid = $couponid;
         $data->stripeEmail = $email;
 
-        // Validate users, course, conntext, plugininstance.
-        $validateddata = self::validate_data( $userid, $instanceid);
+        // Validate users, course, context, plugininstance.
+        $validateddata = self::validate_data($userid, $instanceid);
         $plugininstance = $validateddata[0];
         $course = $validateddata[1];
         $context = $validateddata[2];
@@ -621,21 +704,21 @@ class moodle_enrol_stripepayment_external extends external_api {
         $data->userid = (int)$userid;
         $data->timeupdated = time();
 
-        if ( $checkoutsession->payment_status !== 'paid') {
-            self::message_stripepayment_error_to_admin("Payment status: ".$checkoutsession->payment_status, $data);
+        if ($checkoutsession['payment_status'] !== 'paid') {
+            self::message_stripepayment_error_to_admin("Payment status: ".$checkoutsession['payment_status'], $data);
             redirect($CFG->wwwroot);
         }
         $PAGE->set_context($context);
         try {
             // Send the file, this line will be reached if no error was thrown above.
-            $failuremessage = $charge ? ($charge->failure_message ?? 'NA') : 'NA';
-            $failurecode = $charge ? ($charge->failure_code ?? 'NA') : 'NA';
+            $failuremessage = $charge ? ($charge['last_payment_error']['message'] ?? 'NA') : 'NA';
+            $failurecode = $charge ? ($charge['last_payment_error']['code'] ?? 'NA') : 'NA';
             $data->couponid = $couponid;
             $data->receiveremail = $user->email; // Use user email from database instead of Stripe response.
-            $data->receiverid = $checkoutsession->customer;
+            $data->receiverid = $checkoutsession['customer'];
             $data->txnid = $txnid;
-            $data->price = $charge ? $charge->amount / 100 : 0;
-            $data->memo = $charge ? $charge->payment_method : 'none';
+            $data->price = $charge ? $charge['amount'] / 100 : 0;
+            $data->memo = $charge ? ($charge['payment_method'] ?? 'none') : 'none';
             $data->paymentstatus = $paymentstatus;
             $data->pendingreason = $failuremessage;
             $data->reasoncode = $failurecode;

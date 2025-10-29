@@ -42,6 +42,79 @@ require_once($CFG->dirroot.'/lib/adminlib.php');
  */
 class enrol_stripepayment_plugin extends enrol_plugin {
     /**
+     * Stripe API base URL
+     */
+    const STRIPE_API_BASE = 'https://api.stripe.com/v1/';
+
+    /**
+     * Make a cURL request to Stripe API
+     *
+     * @param string $method HTTP method (GET, POST, etc.)
+     * @param string $endpoint API endpoint
+     * @param array $data Request data
+     * @param string $secretkey Stripe secret key
+     * @return array Response data
+     * @throws Exception
+     */
+    public function stripe_api_request($method, $endpoint, $data, $secretkey) {
+        $url = self::STRIPE_API_BASE . $endpoint;
+        
+        $ch = curl_init();
+        
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+        curl_setopt($ch, CURLOPT_USERPWD, $secretkey . ':');
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/x-www-form-urlencoded',
+        ]);
+        
+        if ($method === 'POST') {
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+        } else if ($method === 'GET') {
+            if (!empty($data)) {
+                curl_setopt($ch, CURLOPT_URL, $url . '?' . http_build_query($data));
+            }
+        }
+        
+        $response = curl_exec($ch);
+        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlerror = curl_error($ch);
+        curl_close($ch);
+        
+        if ($curlerror) {
+            throw new Exception('cURL error: ' . $curlerror);
+        }
+        
+        $decoded = json_decode($response, true);
+        
+        if ($httpcode >= 400) {
+            $error = isset($decoded['error']['message']) ? $decoded['error']['message'] : 'Unknown error';
+            throw new Exception('Stripe API error: ' . $error . ' (HTTP ' . $httpcode . ')');
+        }
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception('Invalid JSON response from Stripe');
+        }
+        
+        return $decoded;
+    }
+
+    /**
+     * Retrieve a price from Stripe
+     *
+     * @param string $priceid Price ID
+     * @param string $secretkey Stripe secret key
+     * @return array Price data
+     * @throws Exception
+     */
+    private function retrieve_price($priceid, $secretkey) {
+        return $this->stripe_api_request('GET', 'prices/' . $priceid, [], $secretkey);
+    }
+
+    /**
      * Lists all currencies available for plugin.
      * @return $currencies
      */
@@ -829,13 +902,10 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         }
 
         try {
-            require_once(__DIR__ . '/vendor/stripe/stripe-php/init.php');
-            \Stripe\Stripe::setApiKey($secretkey);
-
             // Try to retrieve the price to see if it's accessible with current keys.
-            $price = \Stripe\Price::retrieve($instance->customtext1);
+            $price = $this->retrieve_price($instance->customtext1, $secretkey);
             return ['accessible' => true, 'error' => ''];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Price not found or not accessible with current API keys.
             return ['accessible' => false, 'error' => $e->getMessage()];
         }
