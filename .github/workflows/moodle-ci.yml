@@ -124,6 +124,20 @@ jobs:
         if: ${{ cancelled() }}
         run: exit 1
 
+      - name: Sync version across files
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          
+          # Update version.php release
+          sed -i "s/\$plugin->release.*=.*['\"][^'\"]*['\"];/\$plugin->release   = '${VERSION}';/" stripepayment/version.php
+          
+          # Increment Moodle version
+          CURRENT_MOODLE_VERSION=$(grep -oP '\$plugin->version\s*=\s*\K\d+' stripepayment/version.php)
+          NEW_MOODLE_VERSION=$((CURRENT_MOODLE_VERSION + 1))
+          sed -i "s/\$plugin->version.*=.*[0-9]*;/\$plugin->version   = ${NEW_MOODLE_VERSION};/" stripepayment/version.php
+          
+          echo "Synced version to ${VERSION}"
+
   create_tag_and_release:
     runs-on: ubuntu-24.04
     needs: test
