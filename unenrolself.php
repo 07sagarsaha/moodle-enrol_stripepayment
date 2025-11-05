@@ -24,6 +24,7 @@
  */
 
 defined('MOODLE_INTERNAL') || die();
+use enrol_stripepayment\util;
 
 $enrolid = required_param('enrolid', PARAM_INT);
 $confirm = optional_param('confirm', 0, PARAM_BOOL);
@@ -34,15 +35,14 @@ if (!is_enrolled($context)) {
     redirect(new moodle_url('/'));
 }
 require_login($course);
-$plugin = enrol_get_plugin('stripepayment');
 // Security defined inside following function.
-if (!$plugin->get_unenrolself_link($instance)) {
+if (!util::get_core()->get_unenrolself_link($instance)) {
     redirect(new moodle_url('/course/view.php', ['id' => $course->id]));
 }
 $PAGE->set_url('/enrol/stripepayment/unenrolself.php', ['enrolid' => $instance->id]);
-$PAGE->set_title($plugin->get_instance_name($instance));
+$PAGE->set_title(util::get_core()->get_instance_name($instance));
 if ($confirm && confirm_sesskey()) {
-    $plugin->unenrol_user($instance, $USER->id);
+    util::get_core()->unenrol_user($instance, $USER->id);
     redirect(new moodle_url('/index.php'));
 }
 echo $OUTPUT->header();

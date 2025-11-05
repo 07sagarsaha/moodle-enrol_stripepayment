@@ -430,8 +430,6 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         $body = $OUTPUT->render_from_template('enrol_stripepayment/enrol_page', $templatedata);
 
         // Set up the required JavaScript for Stripe integration.
-        $plugin = enrol_get_plugin('stripepayment');
-        $publishablekey = $plugin->get_current_publishable_key();
         $PAGE->requires->js_call_amd('enrol_stripepayment/stripe_payment', 'stripePayment',
             [
                 $USER->id,

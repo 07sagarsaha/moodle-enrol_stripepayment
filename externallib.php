@@ -29,6 +29,7 @@ use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_value;
 use core_external\external_single_structure;
+use enrol_stripepayment\util;
 
 /**
  * External library for stripepayment
@@ -39,11 +40,6 @@ use core_external\external_single_structure;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class moodle_enrol_stripepayment_external extends external_api {
-
-    private static function get_plugin() {
-        $plugin = enrol_get_plugin('stripepayment');
-        return $plugin;
-    }
     /**
      * Retrieve a coupon from Stripe
      *
@@ -53,7 +49,7 @@ class moodle_enrol_stripepayment_external extends external_api {
      * @throws Exception
      */
     private static function retrieve_coupon($couponid, $secretkey) {
-        return self::get_plugin()->stripe_api_request('GET', 'coupons/' . $couponid, [], $secretkey);
+        return util::stripe_api_request('GET', 'coupons/' . $couponid, [], $secretkey);
     }
 
     /**
@@ -65,7 +61,7 @@ class moodle_enrol_stripepayment_external extends external_api {
      * @throws Exception
      */
     private static function retrieve_customer($customerid, $secretkey) {
-        return self::get_plugin()->stripe_api_request('GET', 'customers/' . $customerid, [], $secretkey);
+        return util::stripe_api_request('GET', 'customers/' . $customerid, [], $secretkey);
     }
 
     /**
@@ -77,7 +73,7 @@ class moodle_enrol_stripepayment_external extends external_api {
      * @throws Exception
      */
     private static function list_customers_by_email($email, $secretkey) {
-        return self::get_plugin()->stripe_api_request('GET', 'customers', ['email' => $email], $secretkey);
+        return util::stripe_api_request('GET', 'customers', ['email' => $email], $secretkey);
     }
 
     /**
@@ -89,7 +85,7 @@ class moodle_enrol_stripepayment_external extends external_api {
      * @throws Exception
      */
     private static function create_customer($customerdata, $secretkey) {
-        return self::get_plugin()->stripe_api_request('POST', 'customers', $customerdata, $secretkey);
+        return util::stripe_api_request('POST', 'customers', $customerdata, $secretkey);
     }
 
     /**
@@ -101,7 +97,7 @@ class moodle_enrol_stripepayment_external extends external_api {
      * @throws Exception
      */
     private static function create_checkout_session($sessiondata, $secretkey) {
-        return self::get_plugin()->stripe_api_request('POST', 'checkout/sessions', $sessiondata, $secretkey);
+        return util::stripe_api_request('POST', 'checkout/sessions', $sessiondata, $secretkey);
     }
 
     /**
@@ -113,7 +109,7 @@ class moodle_enrol_stripepayment_external extends external_api {
      * @throws Exception
      */
     private static function retrieve_checkout_session($sessionid, $secretkey) {
-        return self::get_plugin()->stripe_api_request('GET', 'checkout/sessions/' . $sessionid, [], $secretkey);
+        return util::stripe_api_request('GET', 'checkout/sessions/' . $sessionid, [], $secretkey);
     }
 
     /**
@@ -125,7 +121,7 @@ class moodle_enrol_stripepayment_external extends external_api {
      * @throws Exception
      */
     private static function retrieve_payment_intent($paymentintentid, $secretkey) {
-        return self::get_plugin()->stripe_api_request('GET', 'payment_intents/' . $paymentintentid, [], $secretkey);
+        return util::stripe_api_request('GET', 'payment_intents/' . $paymentintentid, [], $secretkey);
     }
 
     /**
@@ -179,22 +175,20 @@ class moodle_enrol_stripepayment_external extends external_api {
         if (!is_numeric($instanceid) || $instanceid <= 0) {
             throw new invalid_parameter_exception('Invalid instance ID format');
         }
-
-        $plugin = enrol_get_plugin('stripepayment');
         $plugininstance = $DB->get_record("enrol", ["id" => $instanceid, "status" => 0]);
         if (!$plugininstance) {
             throw new invalid_parameter_exception('Enrollment instance not found or disabled');
         }
 
         // Validate Stripe configuration.
-        $secretkey = $plugin->get_current_secret_key();
+        $secretkey = util::get_current_secret_key();
         if (empty($secretkey)) {
             throw new invalid_parameter_exception('Stripe configuration incomplete');
         }
 
-        $defaultcost = (float)$plugin->get_config('cost');
+        $defaultcost = (float)util::get_core()->get_config('cost');
         $cost = (float)$plugininstance->cost > 0 ? (float)$plugininstance->cost : $defaultcost;
-        $currency = $plugininstance->currency ? $plugininstance->currency : 'USD';
+        $currency = $plugininstance->currency ?: 'USD';
         $cost = format_float($cost, 2, false);
 
         $couponname = '';
@@ -252,7 +246,7 @@ class moodle_enrol_stripepayment_external extends external_api {
             throw new invalid_parameter_exception($e->getMessage());
         }
 
-        $minamount = $plugin->minamount($currency);
+        $minamount = util::minamount($currency);
 
         // Calculate UI state for display purposes only.
         $uistate = [
@@ -299,8 +293,6 @@ class moodle_enrol_stripepayment_external extends external_api {
     private static function enroll_user_and_send_notifications($plugininstance, $course, $context, $user, $enrollmentdata) {
         global $DB;
 
-        $plugin = enrol_get_plugin('stripepayment');
-
         // Insert enrollment record.
         $DB->insert_record("enrol_stripepayment", $enrollmentdata);
 
@@ -314,10 +306,10 @@ class moodle_enrol_stripepayment_external extends external_api {
         }
 
         // Enroll user.
-        $plugin->enrol_user($plugininstance, $user->id, $plugininstance->roleid, $timestart, $timeend);
+        util::get_core()->enrol_user($plugininstance, $user->id, $plugininstance->roleid, $timestart, $timeend);
 
         // Send notifications (same logic for both free and paid enrollment).
-        self::send_enrollment_notifications($course, $context, $user, $plugin);
+        self::send_enrollment_notifications($course, $context, $user, util::get_core());
 
         return true;
     }
@@ -479,9 +471,8 @@ class moodle_enrol_stripepayment_external extends external_api {
             ];
         }
 
-        $plugin = enrol_get_plugin('stripepayment');
-        $secretkey = $plugin->get_current_secret_key();
-        $usertoken = $plugin->get_config('webservice_token');
+        $secretkey = util::get_current_secret_key();
+        $usertoken = util::get_core()->get_config('webservice_token');
 
         // Validate Stripe configuration.
         if (empty($secretkey)) {
@@ -507,7 +498,7 @@ class moodle_enrol_stripepayment_external extends external_api {
 
         // Calculate final cost after coupon application and retrieve coupon details.
         $finalcost = $plugininstance->cost;
-        $amount = $plugin->get_stripe_amount($finalcost, $plugininstance->currency, false);
+        $amount = util::get_stripe_amount($finalcost, $plugininstance->currency, false);
         $courseid = $plugininstance->courseid;
         $currency = $plugininstance->currency;
         $description  = format_string($course->fullname, true, ['context' => $context]);
@@ -667,8 +658,7 @@ class moodle_enrol_stripepayment_external extends external_api {
     public static function process_payment($sessionid, $userid, $couponid, $instanceid) {
         global $DB, $CFG, $PAGE, $OUTPUT;
         $data = new stdClass();
-        $plugin = enrol_get_plugin('stripepayment');
-        $secretkey = $plugin->get_current_secret_key();
+        $secretkey = util::get_current_secret_key();
         
         $checkoutsession = self::retrieve_checkout_session($sessionid, $secretkey);
 

@@ -25,6 +25,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use enrol_stripepayment\util;
 defined('MOODLE_INTERNAL') || die();
 global $CFG;
 require_once($CFG->dirroot . '/enrol/stripepayment/lib.php');
@@ -35,9 +36,7 @@ if ($ADMIN->fulltree) {
         get_string('pluginnamedesc', 'enrol_stripepayment')
     ));
 
-    // Dynamic Mode Status Display.
-    $plugin = enrol_get_plugin('stripepayment');
-    $modestatustext = $plugin->get_mode_status_display();
+    $modestatustext = util::get_core()->get_mode_status_display();
 
     $settings->add(new admin_setting_description(
         'enrol_stripepayment/mode_status',
