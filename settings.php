@@ -27,6 +27,8 @@
 
 use enrol_stripepayment\util;
 
+defined('MOODLE_INTERNAL') || die();
+
 if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_heading(
         'enrol_stripepayment_settings',
