@@ -29,9 +29,6 @@ defined('MOODLE_INTERNAL') || die();
 
 use core_enrol\output\enrol_page;
 
-global $CFG;
-require_once($CFG->dirroot . '/lib/adminlib.php');
-
 /**
  * Stripe enrolment plugin implementation.
  *
