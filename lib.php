@@ -130,13 +130,15 @@ class enrol_stripepayment_plugin extends enrol_plugin {
             'LKR', 'LRD', 'LSL', 'MAD', 'MDL', 'MGA', 'MKD', 'MMK', 'MNT', 'MOP', 'MRO', 'MUR', 'MVR', 'MWK', 'MXN', 'MYR', 'MZN',
             'NAD', 'NGN', 'NIO', 'NOK', 'NPR', 'NZD', 'PAB', 'PEN', 'PGK', 'PHP', 'PKR', 'PLN', 'PYG', 'QAR', 'RON', 'RSD', 'RUB',
             'RWF', 'SAR', 'SBD', 'SCR', 'SEK', 'SGD', 'SHP', 'SLL', 'SOS', 'SRD', 'STD', 'SZL', 'THB', 'TJS', 'TOP', 'TRY', 'TTD',
-            'TWD', 'TZS', 'UAH', 'UGX', 'UYU', 'UZS', 'VND', 'VUV', 'WST', 'XAF', 'XCD', 'XOF', 'XPF', 'YER', 'ZAR'];
+            'TWD', 'TZS', 'UAH', 'UGX', 'UYU', 'UZS', 'VND', 'VUV', 'WST', 'XAF', 'XCD', 'XOF', 'XPF', 'YER', 'ZAR',
+        ];
         $currencies = [];
         foreach ($codes as $c) {
             $currencies[$c] = new lang_string($c, 'core_currencies');
         }
         return $currencies;
     }
+
     /**
      * Get stripe amount
      * @param integer $cost
@@ -145,8 +147,9 @@ class enrol_stripepayment_plugin extends enrol_plugin {
      * @return $Stripe ammount
      */
     public function get_stripe_amount($cost, $currency, $reverse) {
-        $nodecimalcurrencies = ["bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga", "pyg",
-            "rwf", "ugx", "vnd", "vuv", "xaf", "xof", "xpf"];
+        $nodecimalcurrencies = ['bif', 'clp', 'djf', 'gnf', 'jpy', 'kmf', 'krw', 'mga', 'pyg',
+            'rwf', 'ugx', 'vnd', 'vuv', 'xaf', 'xof', 'xpf',
+        ];
         if (!$currency) {
             $currency = 'USD';
         }
@@ -160,6 +163,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
             }
         }
     }
+
     /**
      * Return Currency as per country code
      *
@@ -209,6 +213,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         $symbol = (array_key_exists($currency, $currencies)) ? $currencies[$currency] : $currency;
         return $symbol;
     }
+
     /**
      * Returns optional enrolment information icons.
      *
@@ -238,6 +243,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         }
         return [];
     }
+
     /**
      * Lists all protected user roles.
      * @return bool(true or false)
@@ -246,6 +252,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         // Users with role assign cap may tweak the roles later.
         return false;
     }
+
     /**
      * Defines if user can be unenrolled.
      * @param stdClass $instance of the plugin
@@ -255,6 +262,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         // Users with unenrol cap may unenrol other users manually - requires enrol/stripe:unenrol.
         return true;
     }
+
     /**
      * Defines if user can be managed from admin.
      * @param stdClass $instance of the plugin
@@ -264,6 +272,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         // Users with manage cap may tweak period and status - requires enrol/stripe:manage.
         return true;
     }
+
     /**
      * Defines if 'enrol me' link will be shown on course page.
      * @param stdClass $instance of the plugin
@@ -272,6 +281,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
     public function show_enrolme_link(stdClass $instance) {
         return ($instance->status == ENROL_INSTANCE_ENABLED);
     }
+
     /**
      * Sets up navigation entries.
      *
@@ -287,11 +297,16 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         if (has_capability('enrol/stripepayment:manage', $context)) {
             $managelink = new moodle_url(
                 '/enrol/editinstance.php',
-                ['courseid' => $instance->courseid, 'id' => $instance->id,'type' => 'stripepayment']
+                [
+                    'courseid' => $instance->courseid,
+                    'id' => $instance->id,
+                    'type' => 'stripepayment',
+                ]
             );
             $instancesnode->add($this->get_instance_name($instance), $managelink, navigation_node::TYPE_SETTING);
         }
     }
+
     /**
      * Returns edit icons for the page with list of instances
      * @param stdClass $instance
@@ -316,6 +331,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         }
         return $icons;
     }
+
     /**
      * Returns link to page which may be used to add new instance of enrolment plugin in course.
      * @param int $courseid
@@ -329,6 +345,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         // Multiple instances supported - different cost for different roles.
         return new moodle_url('/enrol/editinstance.php', ['courseid' => $courseid, 'type' => 'stripepayment']);
     }
+
     /**
      * Creates course enrol form, checks if form submitted
      * and enrols user if necessary. It can also redirect.
@@ -434,10 +451,10 @@ class enrol_stripepayment_plugin extends enrol_plugin {
                 $USER->id,
                 null, // Couponid starts as null.
                 $instance->id,
-                get_string("pleasewait", "enrol_stripepayment"),
-                get_string("entercoupon", "enrol_stripepayment"),
-                get_string("couponappling", "enrol_stripepayment"),
-                get_string("paymenterror", "enrol_stripepayment"),
+                get_string('pleasewait', 'enrol_stripepayment'),
+                get_string('entercoupon', 'enrol_stripepayment'),
+                get_string('couponappling', 'enrol_stripepayment'),
+                get_string('paymenterror', 'enrol_stripepayment'),
             ]
         );
 
@@ -448,6 +465,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         );
         return $OUTPUT->render($enrolpage);
     }
+
     /**
      * Creates can stripepayament enrol.
      *
@@ -466,6 +484,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         }
         return true;
     }
+
     /**
      * Returns localised name of enrol instance
      *
@@ -486,6 +505,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
             return format_string($instance->name);
         }
     }
+
     /**
      * Restore instance and map settings.
      *
@@ -515,6 +535,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         }
         $step->set_mapping('enrol', $oldid, $instanceid);
     }
+
     /**
      * Restore user enrolment.
      *
@@ -527,6 +548,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
     public function restore_user_enrolment(restore_enrolments_structure_step $step, $data, $instance, $userid, $oldinstancestatus) {
         $this->enrol_user($instance, $userid, null, $data->timestart, $data->timeend, $data->status);
     }
+
     /**
      * Gets an array of the user enrolment actions
      *
@@ -540,7 +562,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         $instance = $ue->enrolmentinstance;
         $params = $manager->get_moodlepage()->url->params();
         $params['ue'] = $ue->id;
-        if ($this->allow_manage($instance) && has_capability("enrol/stripepayment:manage", $context)) {
+        if ($this->allow_manage($instance) && has_capability('enrol/stripepayment:manage', $context)) {
             $url = new moodle_url('/enrol/editenrolment.php', $params);
             $actions[] = new user_enrolment_action(
                 new pix_icon('t/edit', ''),
@@ -549,7 +571,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
                 ['class' => 'editenrollink', 'rel' => $ue->id]
             );
         }
-        if ($this->allow_unenrol($instance) && has_capability("enrol/stripepayment:unenrol", $context)) {
+        if ($this->allow_unenrol($instance) && has_capability('enrol/stripepayment:unenrol', $context)) {
             $url = new moodle_url('/enrol/unenroluser.php', $params);
             $actions[] = new user_enrolment_action(
                 new pix_icon('t/delete', ''),
@@ -560,6 +582,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         }
         return $actions;
     }
+
     /**
      * Set up cron for the plugin (if any).
      *
@@ -568,6 +591,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         $trace = new text_progress_trace();
         $this->process_expirations($trace);
     }
+
     /**
      * Execute synchronisation.
      * @param progress_trace $trace
@@ -577,6 +601,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         $this->process_expirations($trace);
         return 0;
     }
+
     /**
      * Is it possible to delete enrol instance via standard UI?
      *
@@ -587,6 +612,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         $context = context_course::instance($instance->courseid);
         return has_capability('enrol/stripepayment:manage', $context);
     }
+
     /**
      * Is it possible to hide/show enrol instance via standard UI?
      *
@@ -621,7 +647,8 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         $mform->setType('name', PARAM_TEXT);
 
         $options = [ENROL_INSTANCE_ENABLED  => get_string('yes'),
-                         ENROL_INSTANCE_DISABLED => get_string('no')];
+                         ENROL_INSTANCE_DISABLED => get_string('no'),
+        ];
         $mform->addElement('select', 'status', get_string('status', 'enrol_stripepayment'), $options);
         $mform->setDefault('status', $this->get_config('status'));
 
@@ -653,25 +680,37 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         $mform->addElement(
             'duration',
             'enrolperiod',
-            get_string('enrolperiod','enrol_stripepayment'),
+            get_string('enrolperiod', 'enrol_stripepayment'),
             ['optional' => true, 'defaultunit' => 86400]
         );
         $mform->setDefault('enrolperiod', $this->get_config('enrolperiod'));
         $mform->addHelpButton('enrolperiod', 'enrolperiod', 'enrol_stripepayment');
 
-        $mform->addElement('date_time_selector', 'enrolstartdate', get_string('enrolstartdate', 'enrol_stripepayment'),
-        ['optional' => true]);
+        $mform->addElement(
+            'date_time_selector',
+            'enrolstartdate',
+            get_string('enrolstartdate', 'enrol_stripepayment'),
+            ['optional' => true]
+        );
         $mform->setDefault('enrolstartdate', 0);
         $mform->addHelpButton('enrolstartdate', 'enrolstartdate', 'enrol_stripepayment');
 
-        $mform->addElement('date_time_selector', 'enrolenddate', get_string('enrolenddate', 'enrol_stripepayment'),
-        ['optional' => true]);
+        $mform->addElement(
+            'date_time_selector',
+            'enrolenddate',
+            get_string('enrolenddate', 'enrol_stripepayment'),
+            ['optional' => true]
+        );
         $mform->setDefault('enrolenddate', 0);
         $mform->addHelpButton('enrolenddate', 'enrolenddate', 'enrol_stripepayment');
 
         if (enrol_accessing_via_instance($instance)) {
-            $mform->addElement('static', 'selfwarn', get_string('instanceeditselfwarning', 'core_enrol'),
-            get_string('instanceeditselfwarningtext', 'core_enrol'));
+            $mform->addElement(
+                'static',
+                'selfwarn',
+                get_string('instanceeditselfwarning', 'core_enrol'),
+                get_string('instanceeditselfwarningtext', 'core_enrol')
+            );
         }
     }
 
@@ -741,6 +780,12 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         return $errors;
     }
 
+    /**
+     * Get minimum amount for currency
+     *
+     * @param string $currency Currency code
+     * @return float Minimum amount
+     */
     public function minamount($currency) {
         $minamount = [
             'USD' => 0.5, 'AED' => 2.0, 'AUD' => 0.5, 'BGN' => 1.0, 'BRL' => 0.5,
@@ -809,7 +854,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         return [
             'publishable' => $publishable,
             'secret' => $secret,
-            'mode' => $mode
+            'mode' => $mode,
         ];
     }
 
@@ -832,7 +877,6 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         $keys = $this->get_current_api_keys();
         return $keys['publishable'];
     }
-
 
     /**
      * Validate API keys for the current mode.
@@ -868,7 +912,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
 
         return [
             'valid' => empty($errors),
-            'errors' => $errors
+            'errors' => $errors,
         ];
     }
 
@@ -922,7 +966,6 @@ class enrol_stripepayment_plugin extends enrol_plugin {
     }
 }
 
-
 /**
  * class for helping built the admin setting form
  */
@@ -949,6 +992,7 @@ class admin_enrol_stripepayment_configtext extends admin_setting_configtext {
         }
         return ($this->config_write($this->name, $data) ? '' : get_string('errorsetting', 'admin'));
     }
+
     /**
      * Validate data before storage.
      *

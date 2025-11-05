@@ -168,7 +168,7 @@ if ($ADMIN->fulltree) {
     ));
 
     // Variable $enroll button color.
-    $settings->add( new admin_setting_configcolourpicker(
+    $settings->add(new admin_setting_configcolourpicker(
         'enrol_stripepayment/enrolbtncolor',
         get_string('enrolbtncolor', 'enrol_stripepayment'),
         get_string('enrolbtncolordes', 'enrol_stripepayment'),
