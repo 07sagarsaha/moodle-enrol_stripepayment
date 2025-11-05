@@ -25,8 +25,6 @@
 
 namespace enrol_stripepayment;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Utility class for Stripe payment plugin
  *
@@ -36,7 +34,6 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class util {
-
     /** @var enrol_stripepayment_plugin|null Cached plugin instance */
     private static $plugin = null;
 
@@ -105,5 +102,4 @@ class util {
     public static function minamount($currency) {
         return self::get_core()->minamount($currency);
     }
-
 }

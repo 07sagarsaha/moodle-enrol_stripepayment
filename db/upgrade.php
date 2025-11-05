@@ -145,7 +145,6 @@ function xmldb_enrol_stripepayment_upgrade($oldversion) {
                 // Clear legacy keys after migration.
                 set_config('publishablekey', '', 'enrol_stripepayment');
                 set_config('secretkey', '', 'enrol_stripepayment');
-
             } else if (strpos($legacysecret, 'sk_live_') === 0 && strpos($legacypublishable, 'pk_live_') === 0) {
                 set_config('livepublishablekey', $legacypublishable, 'enrol_stripepayment');
                 set_config('livesecretkey', $legacysecret, 'enrol_stripepayment');

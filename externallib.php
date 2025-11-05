@@ -737,6 +737,9 @@ class moodle_enrol_stripepayment_external extends external_api {
 
     /**
      * validate plugininstance, course, user, context if validate then ok
+     * @param number $userid
+     * @param number $instanceid
+     * @return array
      * else send message to admin
      */
     public static function validate_data($userid, $instanceid ) {
