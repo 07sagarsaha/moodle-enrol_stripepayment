@@ -44,7 +44,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
     /**
      * Stripe API base URL
      */
-    const STRIPE_API_BASE = 'https://api.stripe.com/v1/';
+    public const STRIPE_API_BASE = 'https://api.stripe.com/v1/';
 
     /**
      * Make a cURL request to Stripe API

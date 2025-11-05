@@ -58,8 +58,7 @@ jobs:
 
       - name: Clean Extra Files from Plugin
         run: |
-          rm -rf stripepayment/.git stripepayment/.github stripepayment/node_modules stripepayment/tests stripepayment/phpunit.xml
-          rm -f stripepayment/composer.* stripepayment/package*.json stripepayment/webpack.config.js stripepayment/.zipignore
+          rm -rf $(cat stripepayment/exclude.lst | tr '\n' ' ')
 
       - name: Install moodle-plugin-ci tooling
         run: |
@@ -79,6 +78,14 @@ jobs:
       - name: PHP Lint
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci phplint stripepayment
+
+      - name: Moodle Code Checker
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpcs --max-warnings 0 stripepayment
+      
+      - name: Moodle PHPDoc Checker
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpdoc --max-warnings 0 stripepayment
 
       - name: PHP Mess Detector
         if: ${{ !cancelled() }}
@@ -123,20 +130,6 @@ jobs:
       - name: Mark cancelled jobs as failed
         if: ${{ cancelled() }}
         run: exit 1
-
-      - name: Sync version across files
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          
-          # Update version.php release
-          sed -i "s/\$plugin->release.*=.*['\"][^'\"]*['\"];/\$plugin->release   = '${VERSION}';/" stripepayment/version.php
-          
-          # Increment Moodle version
-          CURRENT_MOODLE_VERSION=$(grep -oP '\$plugin->version\s*=\s*\K\d+' stripepayment/version.php)
-          NEW_MOODLE_VERSION=$((CURRENT_MOODLE_VERSION + 1))
-          sed -i "s/\$plugin->version.*=.*[0-9]*;/\$plugin->version   = ${NEW_MOODLE_VERSION};/" stripepayment/version.php
-          
-          echo "Synced version to ${VERSION}"
 
   create_tag_and_release:
     runs-on: ubuntu-24.04
