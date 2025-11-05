@@ -212,7 +212,8 @@ class moodle_enrol_stripepayment_external extends external_api {
             }
 
             // Check if coupon has usage limits.
-            if (isset($coupon['max_redemptions']) && isset($coupon['times_redeemed'])
+            if (
+                isset($coupon['max_redemptions']) && isset($coupon['times_redeemed'])
                 && $coupon['times_redeemed'] >= $coupon['max_redemptions']
             ) {
                 throw new Exception('Coupon usage limit exceeded');
@@ -373,7 +374,8 @@ class moodle_enrol_stripepayment_external extends external_api {
         global $CFG;
 
         // Get teacher.
-        if ($users = get_users_by_capability(
+        if (
+            $users = get_users_by_capability(
             $context,
             'moodle/course:update',
             'u.*',
@@ -384,7 +386,7 @@ class moodle_enrol_stripepayment_external extends external_api {
             '',
             false,
             true
-        )
+            )
         ) {
             $users = sort_by_roleassignment_authority($users, $context);
             $teacher = array_shift($users);
@@ -604,7 +606,8 @@ class moodle_enrol_stripepayment_external extends external_api {
                     // Attempt to retrieve customer with the existing ID.
                     self::retrieve_customer($receiverid, $secretkey);
                 } catch (Exception $e) {
-                    if (strpos($e->getMessage(), 'No such customer') !== false
+                    if (
+                        strpos($e->getMessage(), 'No such customer') !== false
                         || strpos($e->getMessage(), 'You do not have access') !== false
                     ) {
                         // Customer doesn't exist or inaccessible with current API key.

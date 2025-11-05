@@ -193,7 +193,7 @@ if ($ADMIN->fulltree) {
     $webservicesoverview = $CFG->wwwroot . '/admin/search.php?query=enablewebservices';
     $restweblink = $CFG->wwwroot . '/admin/settings.php?section=webserviceprotocols';
     $createtoken = $CFG->wwwroot . '/admin/webservice/tokens.php';
-    $settings->add(new admin_enrol_stripepayment_configtext(
+    $settings->add(new admin_setting_configtext(
         'enrol_stripepayment/webservice_token',
         get_string('webservicetokenstring', 'enrol_stripepayment'),
         get_string('enablewebservicesfirst', 'enrol_stripepayment') . '<a href="' . $webservicesoverview . '" target="_blank"> '

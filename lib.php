@@ -773,8 +773,11 @@ class enrol_stripepayment_plugin extends enrol_plugin {
             if ($cost <= 0) {
                 $errors['costar'] = get_string('costzeroerror', 'enrol_stripepayment');
             } else if ($cost < $minamount) {
-                $errors['costar'] = get_string('costminimumerror', 'enrol_stripepayment',
-                    $currency . ' ' . number_format($minamount, 2));
+                $errors['costar'] = get_string(
+                    'costminimumerror',
+                    'enrol_stripepayment',
+                    $currency . ' ' . number_format($minamount, 2)
+                );
             }
         }
         return $errors;
@@ -963,47 +966,5 @@ class enrol_stripepayment_plugin extends enrol_plugin {
             // Price not found or not accessible with current API keys.
             return ['accessible' => false, 'error' => $e->getMessage()];
         }
-    }
-}
-
-/**
- * class for helping built the admin setting form
- */
-class admin_enrol_stripepayment_configtext extends admin_setting_configtext {
-    /**
-     * Writes the setting value to the configuration.
-     *
-     * Performs validation and handles special cases for webservice token and empty integer values.
-     *
-     * @param string $data The submitted setting value.
-     * @return string Empty string on success, or an error message string on failure.
-     */
-    public function write_setting($data) {
-        if ($this->name == 'webservice_token' && $data == '') {
-            return get_string('tokenemptyerror', 'enrol_stripepayment');
-        }
-        if ($this->paramtype === PARAM_INT && $data === '') {
-            // Don't complain if '' used instead of 0.
-            $data = 0;
-        }
-        $validated = $this->validate($data);
-        if ($validated !== true) {
-            return $validated;
-        }
-        return ($this->config_write($this->name, $data) ? '' : get_string('errorsetting', 'admin'));
-    }
-
-    /**
-     * Validate data before storage.
-     *
-     * @param string $data The string to be validated.
-     * @return bool|string true for success or error string if invalid.
-     */
-    public function validate($data) {
-        $cleaned = clean_param($data, PARAM_TEXT);
-        if ($cleaned === '') {
-            return get_string('required');
-        }
-        return parent::validate($data);
     }
 }
