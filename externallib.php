@@ -376,16 +376,16 @@ class moodle_enrol_stripepayment_external extends external_api {
         // Get teacher.
         if (
             $users = get_users_by_capability(
-            $context,
-            'moodle/course:update',
-            'u.*',
-            'u.id ASC',
-            '',
-            '',
-            '',
-            '',
-            false,
-            true
+                $context,
+                'moodle/course:update',
+                'u.*',
+                'u.id ASC',
+                '',
+                '',
+                '',
+                '',
+                false,
+                true
             )
         ) {
             $users = sort_by_roleassignment_authority($users, $context);
