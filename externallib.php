@@ -39,90 +39,6 @@ use enrol_stripepayment\util;
  */
 class moodle_enrol_stripepayment_external extends external_api {
     /**
-     * Retrieve a coupon from Stripe
-     *
-     * @param string $couponid Coupon ID
-     * @param string $secretkey Stripe secret key
-     * @return array Coupon data
-     * @throws Exception
-     */
-    private static function retrieve_coupon($couponid, $secretkey) {
-        return util::stripe_api_request('GET', 'coupons/' . $couponid, [], $secretkey);
-    }
-
-    /**
-     * Retrieve a customer from Stripe
-     *
-     * @param string $customerid Customer ID
-     * @param string $secretkey Stripe secret key
-     * @return array Customer data
-     * @throws Exception
-     */
-    private static function retrieve_customer($customerid, $secretkey) {
-        return util::stripe_api_request('GET', 'customers/' . $customerid, [], $secretkey);
-    }
-
-    /**
-     * List customers by email
-     *
-     * @param string $email Customer email
-     * @param string $secretkey Stripe secret key
-     * @return array Customers list
-     * @throws Exception
-     */
-    private static function list_customers_by_email($email, $secretkey) {
-        return util::stripe_api_request('GET', 'customers', ['email' => $email], $secretkey);
-    }
-
-    /**
-     * Create a customer in Stripe
-     *
-     * @param array $customerdata Customer data
-     * @param string $secretkey Stripe secret key
-     * @return array Created customer data
-     * @throws Exception
-     */
-    private static function create_customer($customerdata, $secretkey) {
-        return util::stripe_api_request('POST', 'customers', $customerdata, $secretkey);
-    }
-
-    /**
-     * Create a checkout session
-     *
-     * @param array $sessiondata Session data
-     * @param string $secretkey Stripe secret key
-     * @return array Created session data
-     * @throws Exception
-     */
-    private static function create_checkout_session($sessiondata, $secretkey) {
-        return util::stripe_api_request('POST', 'checkout/sessions', $sessiondata, $secretkey);
-    }
-
-    /**
-     * Retrieve a checkout session
-     *
-     * @param string $sessionid Session ID
-     * @param string $secretkey Stripe secret key
-     * @return array Session data
-     * @throws Exception
-     */
-    private static function retrieve_checkout_session($sessionid, $secretkey) {
-        return util::stripe_api_request('GET', 'checkout/sessions/' . $sessionid, [], $secretkey);
-    }
-
-    /**
-     * Retrieve a payment intent
-     *
-     * @param string $paymentintentid Payment intent ID
-     * @param string $secretkey Stripe secret key
-     * @return array Payment intent data
-     * @throws Exception
-     */
-    private static function retrieve_payment_intent($paymentintentid, $secretkey) {
-        return util::stripe_api_request('GET', 'payment_intents/' . $paymentintentid, [], $secretkey);
-    }
-
-    /**
      * Parameter for couponsettings function
      */
     public static function stripepayment_applycoupon_parameters() {
@@ -199,7 +115,7 @@ class moodle_enrol_stripepayment_external extends external_api {
         $discountamount = 0;
 
         try {
-            $coupon = self::retrieve_coupon($couponid, $secretkey);
+            $coupon = util::stripe_api_request('GET', 'coupon_retrieve', [], $couponid);
 
             // Enhanced coupon validation.
             if (!$coupon || (isset($coupon['valid']) && !$coupon['valid'])) {
@@ -604,7 +520,7 @@ class moodle_enrol_stripepayment_external extends external_api {
             if ($receiverid) {
                 try {
                     // Attempt to retrieve customer with the existing ID.
-                    self::retrieve_customer($receiverid, $secretkey);
+                    util::stripe_api_request('GET', 'customer_retrieve', [], $receiverid);
                 } catch (Exception $e) {
                     if (
                         strpos($e->getMessage(), 'No such customer') !== false
@@ -620,16 +536,17 @@ class moodle_enrol_stripepayment_external extends external_api {
 
             if (!$receiverid) {
                 try {
-                    $customers = self::list_customers_by_email($user->email, $secretkey);
+                    $customers = util::stripe_api_request('GET', 'customer_list', ['email' => $user->email]);
                     if (!empty($customers['data'])) {
                         $receiverid = $customers['data'][0]['id'];
                     } else {
-                        $newcustomer = self::create_customer(
+                        $newcustomer = util::stripe_api_request(
+                            'POST',
+                            'customer_create',
                             [
                                 'email' => $user->email,
                                 'name' => fullname($user),
-                            ],
-                            $secretkey
+                            ]
                         );
                         $receiverid = $newcustomer['id'];
                     }
@@ -690,7 +607,7 @@ class moodle_enrol_stripepayment_external extends external_api {
                     'cancel_url' => $CFG->wwwroot . '/course/view.php?id=' . $courseid,
                 ];
 
-                $session = self::create_checkout_session($sessionparams, $secretkey);
+                $session = util::stripe_api_request('POST', 'checkout_session_create', $sessionparams);
             } catch (Exception $e) {
                 $apierror = $e->getMessage();
             }
@@ -748,16 +665,13 @@ class moodle_enrol_stripepayment_external extends external_api {
     public static function process_payment($sessionid, $userid, $couponid, $instanceid) {
         global $DB, $CFG, $PAGE, $OUTPUT;
         $data = new stdClass();
-        $secretkey = util::get_current_secret_key();
 
-        $checkoutsession = self::retrieve_checkout_session($sessionid, $secretkey);
+        $checkoutsession = util::stripe_api_request('GET', 'checkout_session_retrieve', [], $sessionid);
 
         // For 100% discount, no payment_intent is created.
         if (!empty($checkoutsession['payment_intent'])) {
-            $charge = self::retrieve_payment_intent($checkoutsession['payment_intent'], $secretkey);
-            $email = isset($charge['charges']['data'][0]['receipt_email'])
-                ? $charge['charges']['data'][0]['receipt_email']
-                : ($checkoutsession['customer_details']['email'] ?? '');
+            $charge = util::stripe_api_request('GET', 'payment_intent_retrieve', [], $checkoutsession['payment_intent']);
+            $email = $charge['charges']['data'][0]['receipt_email'] ?? ($checkoutsession['customer_details']['email'] ?? '');
             $paymentstatus = $charge['status'];
             $txnid = $charge['id'];
         } else {

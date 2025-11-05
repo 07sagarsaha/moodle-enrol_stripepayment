@@ -25,6 +25,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+
 use core_enrol\output\enrol_page;
 use enrol_stripepayment\util;
 
@@ -37,18 +38,6 @@ use enrol_stripepayment\util;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class enrol_stripepayment_plugin extends enrol_plugin {
-    /**
-     * Retrieve a price from Stripe
-     *
-     * @param string $priceid Price ID
-     * @param string $secretkey Stripe secret key
-     * @return array Price data
-     * @throws Exception
-     */
-    private function retrieve_price($priceid, $secretkey) {
-        return util::stripe_api_request('GET', 'prices/' . $priceid, [], $secretkey);
-    }
-
     /**
      * Lists all currencies available for plugin.
      * @return $currencies
@@ -736,15 +725,6 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         // If instance doesn't have custom price IDs, it's accessible (will create new prices).
         if (empty($instance->customtext1)) {
             return ['accessible' => true, 'error' => ''];
-        }
-
-        try {
-            // Try to retrieve the price to see if it's accessible with current keys.
-            $price = $this->retrieve_price($instance->customtext1, $secretkey);
-            return ['accessible' => true, 'error' => ''];
-        } catch (Exception $e) {
-            // Price not found or not accessible with current API keys.
-            return ['accessible' => false, 'error' => $e->getMessage()];
         }
     }
 }

@@ -164,22 +164,18 @@ class util {
     }
 
     /**
-     * Stripe API base URL
-     */
-    public const STRIPE_API_BASE = 'https://api.stripe.com/v1/';
-
-    /**
-     * Make a cURL request to Stripe API
+     * Make a cURL request to Stripe API with operation-based logic
      *
      * @param string $method HTTP method (GET, POST, etc.)
-     * @param string $endpoint API endpoint
+     * @param string $operation API operation type
      * @param array $data Request data
-     * @param string $secretkey Stripe secret key
+     * @param string|null $resourceId Resource ID for specific operations
      * @return array Response data
      * @throws Exception
      */
-    public static function stripe_api_request($method, $endpoint, $data, $secretkey) {
-        $url = self::STRIPE_API_BASE . $endpoint;
+    public static function stripe_api_request($method, $operation, $data, $resourceId = null) {
+        $endpoint = self::get_stripe_endpoint($operation, $resourceId);
+        $url = 'https://api.stripe.com/v1/' . $endpoint;
 
         $ch = curl_init();
 
@@ -187,7 +183,7 @@ class util {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        curl_setopt($ch, CURLOPT_USERPWD, $secretkey . ':');
+        curl_setopt($ch, CURLOPT_USERPWD, self::get_current_secret_key() . ':');
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Content-Type: application/x-www-form-urlencoded',
         ]);
@@ -199,6 +195,8 @@ class util {
             if (!empty($data)) {
                 curl_setopt($ch, CURLOPT_URL, $url . '?' . http_build_query($data));
             }
+        } else if ($method === 'DELETE') {
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
         }
 
         $response = curl_exec($ch);
@@ -222,6 +220,63 @@ class util {
         }
 
         return $decoded;
+    }
+
+    /**
+     * Get Stripe API endpoint based on operation type
+     *
+     * @param string $operation The operation type
+     * @param string|null $resourceId Resource ID for specific operations
+     * @return string The Stripe API endpoint
+     * @throws Exception
+     */
+    private static function get_stripe_endpoint($operation, $resourceId = null) {
+        switch ($operation) {
+            case 'coupon_retrieve':
+                if (!$resourceId) {
+                    throw new Exception('Coupon ID is required for coupon retrieval');
+                }
+                return 'coupons/' . $resourceId;
+                
+            case 'coupon_list':
+                return 'coupons';
+                
+            case 'customer_retrieve':
+                if (!$resourceId) {
+                    throw new Exception('Customer ID is required for customer retrieval');
+                }
+                return 'customers/' . $resourceId;
+                
+            case 'customer_list':
+                return 'customers';
+                
+            case 'customer_create':
+                return 'customers';
+                
+            case 'checkout_session_create':
+                return 'checkout/sessions';
+                
+            case 'checkout_session_retrieve':
+                if (!$resourceId) {
+                    throw new Exception('Session ID is required for checkout session retrieval');
+                }
+                return 'checkout/sessions/' . $resourceId;
+                
+            case 'payment_intent_retrieve':
+                if (!$resourceId) {
+                    throw new Exception('Payment Intent ID is required for payment intent retrieval');
+                }
+                return 'payment_intents/' . $resourceId;
+                
+            case 'payment_method_list':
+                return 'payment_methods';
+                
+            case 'refund_create':
+                return 'refunds';
+                
+            default:
+                throw new Exception('Unknown Stripe operation: ' . $operation);
+        }
     }
 
     /**
