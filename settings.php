@@ -34,7 +34,7 @@ if ($ADMIN->fulltree) {
         get_string('pluginnamedesc', 'enrol_stripepayment')
     ));
 
-    $modestatustext = util::get_core()->get_mode_status_display();
+    $modestatustext = util::get_mode_status_display();
 
     $settings->add(new admin_setting_description(
         'enrol_stripepayment/mode_status',
