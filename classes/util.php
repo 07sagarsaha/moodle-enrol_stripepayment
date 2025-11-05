@@ -169,12 +169,12 @@ class util {
      * @param string $method HTTP method (GET, POST, etc.)
      * @param string $operation API operation type
      * @param array $data Request data
-     * @param string|null $resourceId Resource ID for specific operations
+     * @param string|null $resourceid Resource ID for specific operations
      * @return array Response data
      * @throws Exception
      */
-    public static function stripe_api_request($method, $operation, $data, $resourceId = null) {
-        $endpoint = self::get_stripe_endpoint($operation, $resourceId);
+    public static function stripe_api_request($method, $operation, $data, $resourceid = null) {
+        $endpoint = self::get_stripe_endpoint($operation, $resourceid);
         $url = 'https://api.stripe.com/v1/' . $endpoint;
 
         $ch = curl_init();
@@ -226,54 +226,54 @@ class util {
      * Get Stripe API endpoint based on operation type
      *
      * @param string $operation The operation type
-     * @param string|null $resourceId Resource ID for specific operations
+     * @param string|null $resourceid Resource ID for specific operations
      * @return string The Stripe API endpoint
      * @throws Exception
      */
-    private static function get_stripe_endpoint($operation, $resourceId = null) {
+    private static function get_stripe_endpoint($operation, $resourceid = null) {
         switch ($operation) {
             case 'coupon_retrieve':
-                if (!$resourceId) {
+                if (!$resourceid) {
                     throw new Exception('Coupon ID is required for coupon retrieval');
                 }
-                return 'coupons/' . $resourceId;
-                
+                return 'coupons/' . $resourceid;
+
             case 'coupon_list':
                 return 'coupons';
-                
+
             case 'customer_retrieve':
-                if (!$resourceId) {
+                if (!$resourceid) {
                     throw new Exception('Customer ID is required for customer retrieval');
                 }
-                return 'customers/' . $resourceId;
-                
+                return 'customers/' . $resourceid;
+
             case 'customer_list':
                 return 'customers';
-                
+
             case 'customer_create':
                 return 'customers';
-                
+
             case 'checkout_session_create':
                 return 'checkout/sessions';
-                
+
             case 'checkout_session_retrieve':
-                if (!$resourceId) {
+                if (!$resourceid) {
                     throw new Exception('Session ID is required for checkout session retrieval');
                 }
-                return 'checkout/sessions/' . $resourceId;
-                
+                return 'checkout/sessions/' . $resourceid;
+
             case 'payment_intent_retrieve':
-                if (!$resourceId) {
+                if (!$resourceid) {
                     throw new Exception('Payment Intent ID is required for payment intent retrieval');
                 }
-                return 'payment_intents/' . $resourceId;
-                
+                return 'payment_intents/' . $resourceid;
+
             case 'payment_method_list':
                 return 'payment_methods';
-                
+
             case 'refund_create':
                 return 'refunds';
-                
+
             default:
                 throw new Exception('Unknown Stripe operation: ' . $operation);
         }
