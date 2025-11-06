@@ -174,7 +174,7 @@ class util {
      * @throws Exception
      */
     public static function stripe_api_request($method, $operation, $data, $resourceid = null) {
-        $endpoint = self::get_stripe_endpoint($operation, $resourceid);
+        $endpoint = static::get_stripe_endpoint($operation, $resourceid);
         $url = 'https://api.stripe.com/v1/' . $endpoint;
 
         $ch = curl_init();
@@ -230,7 +230,7 @@ class util {
      * @return string The Stripe API endpoint
      * @throws Exception
      */
-    private static function get_stripe_endpoint($operation, $resourceid = null) {
+    public static function get_stripe_endpoint($operation, $resourceid = null) {
         switch ($operation) {
             case 'coupon_retrieve':
                 if (!$resourceid) {
