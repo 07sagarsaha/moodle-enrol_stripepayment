@@ -104,7 +104,7 @@ class moodle_enrol_stripepayment_external extends external_api {
             throw new invalid_parameter_exception('Stripe configuration incomplete');
         }
 
-        $defaultcost = (float)util::get_core()->get_config('cost');
+        $defaultcost = (float)util::$core_plugin->get_config('cost');
         $cost = (float)$plugininstance->cost > 0 ? (float)$plugininstance->cost : $defaultcost;
         $currency = $plugininstance->currency ?: 'USD';
         $cost = format_float($cost, 2, false);
@@ -225,10 +225,10 @@ class moodle_enrol_stripepayment_external extends external_api {
         }
 
         // Enroll user.
-        util::get_core()->enrol_user($plugininstance, $user->id, $plugininstance->roleid, $timestart, $timeend);
+        util::$core_plugin->enrol_user($plugininstance, $user->id, $plugininstance->roleid, $timestart, $timeend);
 
         // Send notifications (same logic for both free and paid enrollment).
-        self::send_enrollment_notifications($course, $context, $user, util::get_core());
+        self::send_enrollment_notifications($course, $context, $user, util::$core_plugin);
 
         return true;
     }
@@ -473,7 +473,7 @@ class moodle_enrol_stripepayment_external extends external_api {
         }
 
         $secretkey = util::get_current_secret_key();
-        $usertoken = util::get_core()->get_config('webservice_token');
+        $usertoken = util::$core_plugin->get_config('webservice_token');
 
         // Validate Stripe configuration.
         if (empty($secretkey)) {

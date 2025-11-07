@@ -39,31 +39,6 @@ use enrol_stripepayment\util;
  */
 class enrol_stripepayment_plugin extends enrol_plugin {
     /**
-     * Lists all currencies available for plugin.
-     * @return $currencies
-     */
-    public function get_currencies() {
-        // See https://www.stripe.com/cgi-bin/webscr?cmd=p/sell/mc/mc_intro-outside,
-        // 3-character ISO-4217: https://cms.stripe.com/us/cgi-bin/?cmd=
-        // _render-content&content_ID=developer/e_howto_api_currency_codes.
-        $codes = [
-            'USD', 'AED', 'AFN', 'ALL', 'AMD', 'ANG', 'AOA', 'ARS', 'AUD', 'AWG', 'AZN', 'BAM', 'BBD', 'BDT', 'BGN', 'BIF', 'BMD',
-            'BND', 'BOB', 'BRL', 'BSD', 'BWP', 'BZD', 'CAD', 'CDF', 'CHF', 'CLP', 'CNY', 'COP', 'CRC', 'CVE', 'CZK', 'DJF', 'DKK',
-            'DOP', 'DZD', 'EGP', 'ETB', 'EUR', 'FJD', 'FKP', 'GBP', 'GEL', 'GIP', 'GMD', 'GNF', 'GTQ', 'GYD', 'HKD', 'HNL', 'HRK',
-            'HTG', 'HUF', 'IDR', 'ILS', 'INR', 'ISK', 'JMD', 'JPY', 'KES', 'KGS', 'KHR', 'KMF', 'KRW', 'KYD', 'KZT', 'LAK', 'LBP',
-            'LKR', 'LRD', 'LSL', 'MAD', 'MDL', 'MGA', 'MKD', 'MMK', 'MNT', 'MOP', 'MRO', 'MUR', 'MVR', 'MWK', 'MXN', 'MYR', 'MZN',
-            'NAD', 'NGN', 'NIO', 'NOK', 'NPR', 'NZD', 'PAB', 'PEN', 'PGK', 'PHP', 'PKR', 'PLN', 'PYG', 'QAR', 'RON', 'RSD', 'RUB',
-            'RWF', 'SAR', 'SBD', 'SCR', 'SEK', 'SGD', 'SHP', 'SLL', 'SOS', 'SRD', 'STD', 'SZL', 'THB', 'TJS', 'TOP', 'TRY', 'TTD',
-            'TWD', 'TZS', 'UAH', 'UGX', 'UYU', 'UZS', 'VND', 'VUV', 'WST', 'XAF', 'XCD', 'XOF', 'XPF', 'YER', 'ZAR',
-        ];
-        $currencies = [];
-        foreach ($codes as $c) {
-            $currencies[$c] = new lang_string($c, 'core_currencies');
-        }
-        return $currencies;
-    }
-
-    /**
      * Return Currency as per country code
      *
      * @param integer $currency the country code
@@ -558,7 +533,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         $mform->addGroup($costarray, 'costar', get_string('cost', 'enrol_stripepayment'), [' '], false);
 
         // Currency select.
-        $currency = $this->get_currencies();
+        $currency = util::get_currencies();
         $mform->addElement('select', 'currency', get_string('currency', 'enrol_stripepayment'), $currency);
         $mform->setDefault('currency', $this->get_config('currency'));
 

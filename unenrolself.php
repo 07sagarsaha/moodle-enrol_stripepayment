@@ -36,13 +36,13 @@ if (!is_enrolled($context)) {
 }
 require_login($course);
 // Security defined inside following function.
-if (!util::get_core()->get_unenrolself_link($instance)) {
+if (!util::$core_plugin->get_unenrolself_link($instance)) {
     redirect(new moodle_url('/course/view.php', ['id' => $course->id]));
 }
 $PAGE->set_url('/enrol/stripepayment/unenrolself.php', ['enrolid' => $instance->id]);
-$PAGE->set_title(util::get_core()->get_instance_name($instance));
+$PAGE->set_title(util::$core_plugin->get_instance_name($instance));
 if ($confirm && confirm_sesskey()) {
-    util::get_core()->unenrol_user($instance, $USER->id);
+    util::$core_plugin->unenrol_user($instance, $USER->id);
     redirect(new moodle_url('/index.php'));
 }
 echo $OUTPUT->header();

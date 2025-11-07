@@ -230,7 +230,7 @@ if ($ADMIN->fulltree) {
         PARAM_FLOAT,
         4
     ));
-    $stripecurrencies = util::get_core()->get_currencies();
+    $stripecurrencies = util::get_currencies();
     $settings->add(new admin_setting_configselect(
         'enrol_stripepayment/currency',
         get_string('currency', 'enrol_stripepayment'),

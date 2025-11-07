@@ -26,6 +26,7 @@
 namespace enrol_stripepayment;
 
 use Exception;
+use lang_string;
 
 /**
  * Utility class for Stripe payment plugin
@@ -36,19 +37,44 @@ use Exception;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class util {
-    /** @var enrol_stripepayment_plugin|null Cached plugin instance */
-    private static $plugin = null;
+    /** @var \enrol_stripepayment_plugin */
+    public static $core_plugin = null;
 
     /**
-     * Get the stripepayment plugin instance
+     * Get the enrol_stripepayment plugin instance.
      *
      * @return \enrol_stripepayment_plugin
      */
     public static function get_core() {
-        if (self::$plugin === null) {
-            self::$plugin = enrol_get_plugin('stripepayment');
+        if (self::$core_plugin === null) {
+            self::$core_plugin = enrol_get_plugin('stripepayment');
         }
-        return self::$plugin;
+        return self::$core_plugin;
+    }
+
+    /**
+     * Lists all currencies available for plugin.
+     * @return $currencies
+     */
+    public static function get_currencies() {
+        // See https://www.stripe.com/cgi-bin/webscr?cmd=p/sell/mc/mc_intro-outside,
+        // 3-character ISO-4217: https://cms.stripe.com/us/cgi-bin/?cmd=
+        // _render-content&content_ID=developer/e_howto_api_currency_codes.
+        $codes = [
+            'USD', 'AED', 'AFN', 'ALL', 'AMD', 'ANG', 'AOA', 'ARS', 'AUD', 'AWG', 'AZN', 'BAM', 'BBD', 'BDT', 'BGN', 'BIF', 'BMD',
+            'BND', 'BOB', 'BRL', 'BSD', 'BWP', 'BZD', 'CAD', 'CDF', 'CHF', 'CLP', 'CNY', 'COP', 'CRC', 'CVE', 'CZK', 'DJF', 'DKK',
+            'DOP', 'DZD', 'EGP', 'ETB', 'EUR', 'FJD', 'FKP', 'GBP', 'GEL', 'GIP', 'GMD', 'GNF', 'GTQ', 'GYD', 'HKD', 'HNL', 'HRK',
+            'HTG', 'HUF', 'IDR', 'ILS', 'INR', 'ISK', 'JMD', 'JPY', 'KES', 'KGS', 'KHR', 'KMF', 'KRW', 'KYD', 'KZT', 'LAK', 'LBP',
+            'LKR', 'LRD', 'LSL', 'MAD', 'MDL', 'MGA', 'MKD', 'MMK', 'MNT', 'MOP', 'MRO', 'MUR', 'MVR', 'MWK', 'MXN', 'MYR', 'MZN',
+            'NAD', 'NGN', 'NIO', 'NOK', 'NPR', 'NZD', 'PAB', 'PEN', 'PGK', 'PHP', 'PKR', 'PLN', 'PYG', 'QAR', 'RON', 'RSD', 'RUB',
+            'RWF', 'SAR', 'SBD', 'SCR', 'SEK', 'SGD', 'SHP', 'SLL', 'SOS', 'SRD', 'STD', 'SZL', 'THB', 'TJS', 'TOP', 'TRY', 'TTD',
+            'TWD', 'TZS', 'UAH', 'UGX', 'UYU', 'UZS', 'VND', 'VUV', 'WST', 'XAF', 'XCD', 'XOF', 'XPF', 'YER', 'ZAR',
+        ];
+        $currencies = [];
+        foreach ($codes as $c) {
+            $currencies[$c] = new lang_string($c, 'core_currencies');
+        }
+        return $currencies;
     }
 
     /**
