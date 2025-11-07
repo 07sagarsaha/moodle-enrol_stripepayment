@@ -16,6 +16,7 @@
 /**
  * External library for stripepayment
  *
+ * @module enrol_stripepayment/stripe_payment
  * @package    enrol_stripepayment
  * @author     DualCube <admin@dualcube.com>
  * @copyright  2019 DualCube Team(https://dualcube.com)
@@ -31,7 +32,7 @@ const applyCoupon = (couponid, instanceid) =>
     fetchMany([{ methodname: "moodle_stripepayment_applycoupon", args: { couponid, instanceid } }])[0];
 
 const stripeEnrol = (userid, couponid, instanceid) =>
-    fetchMany([{ methodname: "moodle_stripepayment_enrol", args: { userid, couponid, instanceid } }])[0];
+    fetchMany([{ methodname: "moodle_stripepayment_process_payment", args: { userid, couponid, instanceid } }])[0];
 
 const createDOM = (instanceid) => {
     const cache = new Map();

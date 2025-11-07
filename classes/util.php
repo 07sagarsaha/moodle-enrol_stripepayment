@@ -25,6 +25,9 @@
 
 namespace enrol_stripepayment;
 
+use context_course;
+use context_system;
+use core_user;
 use Exception;
 use lang_string;
 
@@ -37,19 +40,13 @@ use lang_string;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class util {
-    /** @var \enrol_stripepayment_plugin */
-    public static $core_plugin = null;
-
     /**
      * Get the enrol_stripepayment plugin instance.
      *
      * @return \enrol_stripepayment_plugin
      */
     public static function get_core() {
-        if (self::$core_plugin === null) {
-            self::$core_plugin = enrol_get_plugin('stripepayment');
-        }
-        return self::$core_plugin;
+        return enrol_get_plugin('stripepayment');
     }
 
     /**
@@ -348,4 +345,137 @@ class util {
         $minamount = $minamount[$currency] ?? 0.5;
         return $minamount;
     }
+
+    /**
+     * validate plugininstance, course, user, context if validate then ok
+     * @param number $userid
+     * @param number $instanceid
+     * @return array
+     * else send message to admin
+     */
+    public static function validate_data($userid, $instanceid) {
+        global $DB, $CFG;
+
+        // Validate enrolment instance.
+        if (!$plugininstance = $DB->get_record("enrol", ["id" => $instanceid, "status" => 0])) {
+            self::message_stripepayment_error_to_admin(
+                get_string('invalidinstance', 'enrol_stripepayment'),
+                ["id" => $plugininstance->courseid]
+            );
+            redirect($CFG->wwwroot);
+        }
+
+        // Validate course.
+        if (!$course = $DB->get_record("course", ["id" => $plugininstance->courseid])) {
+            self::message_stripepayment_error_to_admin(
+                get_string('invalidcourseid', 'enrol_stripepayment'),
+                ["id" => $plugininstance->courseid]
+            );
+            redirect($CFG->wwwroot);
+        }
+
+        // Validate context.
+        if (!$context = context_course::instance($course->id, IGNORE_MISSING)) {
+            self::message_stripepayment_error_to_admin(
+                get_string('invalidcontextid', 'enrol_stripepayment'),
+                ["id" => $course->id]
+            );
+            redirect($CFG->wwwroot);
+        }
+
+        // Validate user.
+        if (!$user = $DB->get_record("user", ["id" => $userid])) {
+            self::message_stripepayment_error_to_admin("Not orderdetails valid user id", ["id" => $userid]);
+            redirect($CFG->wwwroot . '/course/view.php?id=' . $course->id);
+        }
+        return [$plugininstance, $course, $context, $user];
+    }
+
+    /**
+     * send error message to admin using Message API
+     * @param string  $subject
+     * @param array $data
+     */
+    public static function message_stripepayment_error_to_admin($subject, $data) {
+        global $PAGE;
+        $PAGE->set_context(context_system::instance());
+
+        $admin = get_admin();
+        $site = get_site();
+        $messagebody = "$site->fullname:  Transaction failed.\n\n$subject\n\n";
+        foreach ($data as $key => $value) {
+            $messagebody .= s($key) . " => " . s($value) . "\n";
+        }
+        $messagesubject = "STRIPE PAYMENT ERROR: " . $subject;
+        $fullmessage = $messagebody;
+        $fullmessagehtml = '<p>' . nl2br(s($messagebody)) . '</p>';
+
+        // Send message using Message API.
+        $message = new \core\message\message();
+        $message->courseid = SITEID;
+        $message->component = 'enrol_stripepayment';
+        $message->name = 'stripepayment_enrolment';
+        $message->userfrom = core_user::get_noreply_user();
+        $message->userto = $admin;
+        $message->subject = $messagesubject;
+        $message->fullmessage = $fullmessage;
+        $message->fullmessageformat = FORMAT_PLAIN;
+        $message->fullmessagehtml = $fullmessagehtml;
+        $message->smallmessage = 'Stripe payment error occurred';
+        $message->notification = 1;
+        $message->contexturl = new \core\url('/admin/index.php');
+        $message->contexturlname = 'Site administration';
+
+        $messageid = message_send($message);
+        if (!$messageid) {
+            debugging('Failed to send stripepayment error notification to admin: ' . $admin->id, DEBUG_DEVELOPER);
+        }
+    }
+
+    /**
+     * Send message to user
+     *
+     * @param stdClass $course Course object
+     * @param stdClass $userfrom User sending the message
+     * @param mixed $userto User(s) receiving the message
+     * @param string $subject Message subject
+     * @param stdClass $orderdetails Order details
+     * @param string $shortname Course shortname
+     * @param string $fullmessage Full message text
+     * @param string $fullmessagehtml Full message HTML
+     * @return void
+     */
+    public static function send_message(
+        $course,
+        $userfrom,
+        $userto,
+        $subject,
+        $orderdetails,
+        $shortname,
+        $fullmessage,
+        $fullmessagehtml
+    ) {
+        $recipients = is_array($userto) ? $userto : [$userto];
+        foreach ($recipients as $recipient) {
+            $message = new \core\message\message();
+            $message->courseid = $course->id;
+            $message->component = 'enrol_stripepayment';
+            $message->name = 'stripepayment_enrolment';
+            $message->userfrom = $userfrom;
+            $message->userto = $recipient;
+            $message->subject = $subject;
+            $message->fullmessage = $fullmessage;
+            $message->fullmessageformat = FORMAT_PLAIN;
+            $message->fullmessagehtml = $fullmessagehtml;
+            $message->smallmessage = get_string('newenrolment', 'enrol_stripepayment', $shortname);
+            $message->notification = 1;
+            $message->contexturl = new \core\url('/course/view.php', ['id' => $course->id]);
+            $message->contexturlname = $orderdetails->coursename;
+
+            if (!message_send($message)) {
+                debugging("Failed to send stripepayment enrolment notification to user: {$recipient->id}", DEBUG_DEVELOPER);
+            }
+        }
+    }
+
 }
