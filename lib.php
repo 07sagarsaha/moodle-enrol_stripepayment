@@ -233,7 +233,6 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         $cost = ((float) $instance->cost <= 0) ? (float) $this->get_config('cost') : (float) $instance->cost;
 
         $name = $this->get_instance_name($instance);
-        $localisedcost = format_float($cost, 2, true);
         $cost = format_float($cost, 2, false);
 
         // Check if current API keys can access the products/prices for this instance.
@@ -256,7 +255,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         // Prepare data for the template - always use the same template regardless of cost.
         $templatedata = [
             'currency' => $instance->currency,
-            'cost' => $localisedcost,
+            'cost' => format_float($cost, 2, true),
             'coursename' => format_string($course->fullname, true, ['context' => $context]),
             'instanceid' => $instance->id,
             'wwwroot' => $CFG->wwwroot,
