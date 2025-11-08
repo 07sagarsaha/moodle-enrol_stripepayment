@@ -390,7 +390,6 @@ class util {
      * Make a cURL request to Stripe API with operation-based logic
      *
      * @param string $operation API operation type
-     * @param array $data Request data
      * @param string|null $resourceid Resource ID for specific operations
      * @return array Response data
      * @throws Exception
