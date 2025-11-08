@@ -144,7 +144,7 @@ class process_payment extends external_api {
             if ($receiverid) {
                 try {
                     // Attempt to retrieve customer with the existing ID.
-                    util::stripe_api_request('GET', 'customer_retrieve', [], $receiverid);
+                    util::stripe_api_request('customer_retrieve', [], $receiverid);
                 } catch (Exception $e) {
                     if (
                         strpos($e->getMessage(), 'No such customer') !== false
@@ -158,12 +158,11 @@ class process_payment extends external_api {
                 }
             } else {
                 try {
-                    $customers = util::stripe_api_request('GET', 'customer_list', ['email' => $user->email]);
+                    $customers = util::stripe_api_request('customer_list', ['email' => $user->email]);
                     if (!empty($customers['data'])) {
                         $receiverid = $customers['data'][0]['id'];
                     } else {
                         $newcustomer = util::stripe_api_request(
-                            'POST',
                             'customer_create',
                             [
                                 'email' => $user->email,
@@ -229,7 +228,7 @@ class process_payment extends external_api {
                     'cancel_url' => $CFG->wwwroot . '/course/view.php?id=' . $courseid,
                 ];
 
-                $session = util::stripe_api_request('POST', 'checkout_session_create', $sessionparams);
+                $session = util::stripe_api_request('checkout_session_create', $sessionparams);
             } catch (Exception $e) {
                 $apierror = $e->getMessage();
             }

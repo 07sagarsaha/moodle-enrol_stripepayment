@@ -119,7 +119,7 @@ class apply_coupon extends external_api {
         $discountamount = 0;
 
         try {
-            $coupon = util::stripe_api_request('GET', 'coupon_retrieve', [], $couponid);
+            $coupon = util::stripe_api_request('coupon_retrieve', [], $couponid);
 
             // Enhanced coupon validation.
             if (!$coupon || (isset($coupon['valid']) && !$coupon['valid'])) {

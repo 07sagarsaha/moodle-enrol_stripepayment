@@ -28,7 +28,7 @@ defined('MOODLE_INTERNAL') || die();
 $services = ['moodle_enrol_stripepayment' => [
     'functions' => [
             'moodle_stripepayment_applycoupon',
-            'moodle_stripepayment_enrol',
+            'moodle_stripepayment_process_enrolment',
             'moodle_stripepayment_process_payment',
         ],
         'requiredcapability' => '',

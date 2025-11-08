@@ -80,11 +80,11 @@ class process_enrolment extends external_api {
         global $DB, $CFG, $PAGE, $OUTPUT;
         $data = new stdClass();
 
-        $checkoutsession = util::stripe_api_request('GET', 'checkout_session_retrieve', [], $sessionid);
+        $checkoutsession = util::stripe_api_request('checkout_session_retrieve', [], $sessionid);
 
         // For 100% discount, no payment_intent is created.
         if (!empty($checkoutsession['payment_intent'])) {
-            $charge = util::stripe_api_request('GET', 'payment_intent_retrieve', [], $checkoutsession['payment_intent']);
+            $charge = util::stripe_api_request('payment_intent_retrieve', [], $checkoutsession['payment_intent']);
             $email = $charge['charges']['data'][0]['receipt_email'] ?? ($checkoutsession['customer_details']['email'] ?? '');
             $paymentstatus = $charge['status'];
             $txnid = $charge['id'];

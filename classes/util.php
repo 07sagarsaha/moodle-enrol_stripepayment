@@ -267,8 +267,10 @@ class util {
      * @return array Response data
      * @throws Exception
      */
-    public static function stripe_api_request($method, $operation, $data, $resourceid = null) {
-        $endpoint = static::get_stripe_endpoint($operation, $resourceid);
+    public static function stripe_api_request($operation, $data, $resourceid = null) {
+        $endpoint_info = static::get_stripe_endpoint($operation, $resourceid);
+        $method = $endpoint_info['method'];
+        $endpoint = $endpoint_info['endpoint'];
         $url = 'https://api.stripe.com/v1/' . $endpoint;
 
         $ch = curl_init();
@@ -316,62 +318,94 @@ class util {
         return $decoded;
     }
 
+    public static function routes() {
+        return [
+            'coupon_retrieve' => [
+                'method'   => 'GET',
+                'path'     => 'coupons/',
+                'needs_id' => true,
+                'message'  => 'Coupon ID is required for coupon retrieval',
+            ],
+            'coupon_list' => [
+                'method'   => 'GET',
+                'path'     => 'coupons',
+                'needs_id' => false,
+            ],
+            'customer_retrieve' => [
+                'method'   => 'GET',
+                'path'     => 'customers/',
+                'needs_id' => true,
+                'message'  => 'Customer ID is required for customer retrieval',
+            ],
+            'customer_list' => [
+                'method'   => 'GET',
+                'path'     => 'customers',
+                'needs_id' => false,
+            ],
+            'customer_create' => [
+                'method'   => 'POST',
+                'path'     => 'customers',
+                'needs_id' => false,
+            ],
+            'checkout_session_create' => [
+                'method'   => 'POST',
+                'path'     => 'checkout/sessions',
+                'needs_id' => false,
+            ],
+            'checkout_session_retrieve' => [
+                'method'   => 'GET',
+                'path'     => 'checkout/sessions/',
+                'needs_id' => true,
+                'message'  => 'Session ID is required for checkout session retrieval',
+            ],
+            'payment_intent_retrieve' => [
+                'method'   => 'GET',
+                'path'     => 'payment_intents/',
+                'needs_id' => true,
+                'message'  => 'Payment Intent ID is required for payment intent retrieval',
+            ],
+            'payment_method_list' => [
+                'method'   => 'GET',
+                'path'     => 'payment_methods',
+                'needs_id' => false,
+            ],
+            'refund_create' => [
+                'method'   => 'POST',
+                'path'     => 'refunds',
+                'needs_id' => false,
+            ],
+        ];
+    }
+
     /**
-     * Get Stripe API endpoint based on operation type
+     * Make a cURL request to Stripe API with operation-based logic
      *
-     * @param string $operation The operation type
+     * @param string $method HTTP method (GET, POST, etc.)
+     * @param string $operation API operation type
+     * @param array $data Request data
      * @param string|null $resourceid Resource ID for specific operations
-     * @return string The Stripe API endpoint
+     * @return array Response data
      * @throws Exception
      */
     public static function get_stripe_endpoint($operation, $resourceid = null) {
-        switch ($operation) {
-            case 'coupon_retrieve':
-                if (!$resourceid) {
-                    throw new Exception('Coupon ID is required for coupon retrieval');
-                }
-                return 'coupons/' . $resourceid;
-
-            case 'coupon_list':
-                return 'coupons';
-
-            case 'customer_retrieve':
-                if (!$resourceid) {
-                    throw new Exception('Customer ID is required for customer retrieval');
-                }
-                return 'customers/' . $resourceid;
-
-            case 'customer_list':
-                return 'customers';
-
-            case 'customer_create':
-                return 'customers';
-
-            case 'checkout_session_create':
-                return 'checkout/sessions';
-
-            case 'checkout_session_retrieve':
-                if (!$resourceid) {
-                    throw new Exception('Session ID is required for checkout session retrieval');
-                }
-                return 'checkout/sessions/' . $resourceid;
-
-            case 'payment_intent_retrieve':
-                if (!$resourceid) {
-                    throw new Exception('Payment Intent ID is required for payment intent retrieval');
-                }
-                return 'payment_intents/' . $resourceid;
-
-            case 'payment_method_list':
-                return 'payment_methods';
-
-            case 'refund_create':
-                return 'refunds';
-
-            default:
-                throw new Exception('Unknown Stripe operation: ' . $operation);
+        // HTTP method must be the first element
+        $routes = static::routes();
+    
+        if (!isset($routes[$operation])) {
+            throw new Exception('Unknown Stripe operation: ' . $operation);
         }
-    }
+    
+        $route = $routes[$operation];
+    
+        if ($route['needs_id'] && !$resourceid) {
+            throw new Exception($route['message']);
+        }
+    
+        return [
+            'method'   => $route['method'],
+            'endpoint' => $route['needs_id'] ? $route['path'] . $resourceid : $route['path'],
+        ];
+    }    
 
     /**
      * Get stripe amount
