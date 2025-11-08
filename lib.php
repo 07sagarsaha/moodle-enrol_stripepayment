@@ -304,8 +304,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
             } else {
                 $role = '';
             }
-            $enrol = $this->get_name();
-            return get_string('pluginname', 'enrol_' . $enrol) . $role;
+            return get_string('pluginname', 'enrol_' . $this->get_name()) . $role;
         } else {
             return format_string($instance->name);
         }

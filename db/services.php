@@ -46,7 +46,6 @@ $functions = [
     ],
     'moodle_stripepayment_process_payment' => [
         'classname' => 'enrol_stripepayment\external\process_payment',
-        'classpath' => '',
         'description' => 'Update information after Stripe Successful Connect',
         'type' => 'write',
         'ajax' => true,
