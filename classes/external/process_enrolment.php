@@ -25,6 +25,7 @@
 
  namespace enrol_stripepayment\external;
  use context_course;
+ use core\exception\invalid_parameter_exception;
  use core_external\external_api;
  use core_external\external_function_parameters;
  use core_external\external_value;
@@ -32,7 +33,6 @@
  use core_user;
  use enrol_stripepayment\util;
  use Exception;
- use invalid_parameter_exception;
  use stdClass;
  
  /**

@@ -29,6 +29,7 @@
  use core_external\external_value;
  use core_external\external_single_structure;
  use enrol_stripepayment\util;
+ use Exception;
  
  /**
   * External enrol function for stripepayment
