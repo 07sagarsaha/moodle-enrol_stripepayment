@@ -261,12 +261,12 @@ class util {
      * Make a cURL request to Stripe API with operation-based logic
      *
      * @param string $operation API operation type
-     * @param array $data Request data
+     * @param array|null $data Request data
      * @param string|null $resourceid Resource ID for specific operations
      * @return array Response data
      * @throws Exception
      */
-    public static function stripe_api_request($operation, $data, $resourceid = null) {
+    public static function stripe_api_request($operation, $resourceid = null, $data = null) {
         $endpointinfo = static::get_stripe_endpoint($operation, $resourceid);
         $method = $endpointinfo['method'];
         $endpoint = $endpointinfo['endpoint'];

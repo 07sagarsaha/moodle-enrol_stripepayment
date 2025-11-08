@@ -80,11 +80,11 @@ class process_enrolment extends external_api {
         global $DB, $CFG, $PAGE, $OUTPUT;
         $data = new stdClass();
 
-        $checkoutsession = util::stripe_api_request('checkout_session_retrieve', [], $sessionid);
+        $checkoutsession = util::stripe_api_request('checkout_session_retrieve', $sessionid);
 
         // For 100% discount, no payment_intent is created.
         if (!empty($checkoutsession['payment_intent'])) {
-            $charge = util::stripe_api_request('payment_intent_retrieve', [], $checkoutsession['payment_intent']);
+            $charge = util::stripe_api_request('payment_intent_retrieve', $checkoutsession['payment_intent']);
             $email = $charge['charges']['data'][0]['receipt_email'] ?? ($checkoutsession['customer_details']['email'] ?? '');
             $paymentstatus = $charge['status'];
             $txnid = $charge['id'];
@@ -187,6 +187,52 @@ class process_enrolment extends external_api {
     }
 
     /**
+     * Helper function to set mail content.
+     *
+     * @param \stdClass $course
+     * @param \stdClass|array $to        Receiver (user or array of admins)
+     * @param \stdClass $from            Sender user
+     * @param \stdClass $orderdetails    Order details data
+     * @param string $shortname          Course shortname
+     * @param string $messagekey         Language string identifier
+     * @param string $subjectkey         Subject language identifier
+     * @param array $stringdata          Additional data for get_string()
+     */
+    private static function mail_content(
+        $course,
+        $to,
+        $from,
+        $orderdetails,
+        string $shortname,
+        string $messagekey,
+        string $subjectkey,
+        array $stringdata
+    ) {
+        global $CFG;
+        $fullmessage = get_string(
+            'welcometocoursetext',
+            'enrol_stripepayment',
+            [
+                'course' => $course->fullname,
+                'sitename' => $CFG->wwwroot,
+            ]
+        );
+        $fullmessagehtml = '<p>' . $fullmessage . '</p>';
+        $subject = get_string($subjectkey, 'enrol_stripepayment', $stringdata);
+
+        util::send_message(
+            $course,
+            $from,
+            $to,
+            $subject,
+            $orderdetails,
+            $shortname,
+            $fullmessage,
+            $fullmessagehtml
+        );
+    }
+
+    /**
      * Send enrollment notifications to students, teachers, and admins
      * @param stdClass $course The course object
      * @param stdClass $context The course context
@@ -223,103 +269,59 @@ class process_enrolment extends external_api {
         $mailadmins   = $plugin->get_config('mailadmins');
 
         // Prepare common data.
-        $shortname = format_string($course->shortname, true, ['context' => $context]);
-        $coursecontext = context_course::instance($course->id);
-        $orderdetails = new \stdClass();
+        $shortname       = format_string($course->shortname, true, ['context' => $context]);
+        $coursecontext   = context_course::instance($course->id);
+        $orderdetails            = new \stdClass();
         $orderdetails->coursename = format_string($course->fullname, true, ['context' => $coursecontext]);
-        $orderdetails->course = format_string($course->fullname, true, ['context' => $coursecontext]);
-        $orderdetails->user = fullname($user);
-        $sitename = $CFG->wwwroot;
+        $orderdetails->course     = format_string($course->fullname, true, ['context' => $coursecontext]);
+        $orderdetails->user       = fullname($user);
+        $sitename        = $CFG->wwwroot;
 
         // Student notification.
         if (!empty($mailstudents)) {
             $orderdetails->profileurl = "$CFG->wwwroot/user/view.php?id=$user->id";
             $userfrom = empty($teacher) ? core_user::get_noreply_user() : $teacher;
-            $fullmessage = get_string(
-                'welcometocoursetext',
-                'enrol_stripepayment',
-                [
-                    'course' => $course->fullname,
-                    'sitename' => $sitename,
-                ]
-            );
-            $fullmessagehtml = '<p>' . $fullmessage . '</p>';
-            $subject = get_string("enrolmentuser", 'enrol_stripepayment', $shortname);
-            util::send_message(
+
+            self::mail_content(
                 $course,
-                $userfrom,
                 $user,
-                $subject,
+                $userfrom,
                 $orderdetails,
                 $shortname,
-                $fullmessage,
-                $fullmessagehtml
+                'welcometocoursetext',
+                'enrolmentuser',
+                ['course' => $course->fullname, 'sitename' => $sitename]
             );
         }
 
         // Teacher notification.
         if (!empty($mailteachers) && !empty($teacher)) {
-            $fullmessage = get_string(
-                'adminmessage',
-                'enrol_stripepayment',
-                [
-                    'username' => fullname($user),
-                    'course' => $course->fullname,
-                    'sitename' => $sitename,
-                ]
-            );
-            $fullmessagehtml = '<p>' . $fullmessage . '</p>';
-            $subject = get_string(
-                "enrolmentnew",
-                'enrol_stripepayment',
-                [
-                    'username' => fullname($user),
-                    'course' => $course->fullname,
-                ]
-            );
-            util::send_message(
+            self::mail_content(
                 $course,
-                $user,
                 $teacher,
-                $subject,
+                $user,
                 $orderdetails,
                 $shortname,
-                $fullmessage,
-                $fullmessagehtml
+                'adminmessage',
+                'enrolmentnew',
+                ['username' => fullname($user), 'course' => $course->fullname, 'sitename' => $sitename]
             );
         }
 
-        // Admin notifications.
+        // Admin notification.
         if (!empty($mailadmins)) {
             $admins = get_admins();
-            $fullmessage = get_string(
-                'adminmessage',
-                'enrol_stripepayment',
-                [
-                    'username' => fullname($user),
-                    'course' => $course->fullname,
-                    'sitename' => $sitename,
-                ]
-            );
-            $fullmessagehtml = '<p>' . $fullmessage . '</p>';
-            $subject = get_string(
-                "enrolmentnew",
-                'enrol_stripepayment',
-                [
-                    'username' => fullname($user),
-                    'course' => $course->fullname,
-                ]
-            );
-            util::send_message(
+            self::mail_content(
                 $course,
-                $user,
                 $admins,
-                $subject,
+                $user,
                 $orderdetails,
                 $shortname,
-                $fullmessage,
-                $fullmessagehtml
+                'adminmessage',
+                'enrolmentnew',
+                ['username' => fullname($user), 'course' => $course->fullname, 'sitename' => $sitename]
             );
         }
+
     }
 }
