@@ -97,7 +97,7 @@ class process_enrolment extends external_api {
         }
 
         $data->couponid = $couponid;
-        $data->stripeEmail = $email;
+        $data->stripeemail = $email;
 
         // Validate users, course, context, plugininstance.
         $validateddata = util::validate_data($userid, $instanceid);
