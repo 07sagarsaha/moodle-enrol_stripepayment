@@ -156,9 +156,7 @@ class process_payment extends external_api {
                         throw $e; // Some other error, rethrow.
                     }
                 }
-            }
-
-            if (!$receiverid) {
+            } else {
                 try {
                     $customers = util::stripe_api_request('GET', 'customer_list', ['email' => $user->email]);
                     if (!empty($customers['data'])) {
