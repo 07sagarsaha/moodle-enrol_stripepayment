@@ -260,7 +260,6 @@ class util {
     /**
      * Make a cURL request to Stripe API with operation-based logic
      *
-     * @param string $method HTTP method (GET, POST, etc.)
      * @param string $operation API operation type
      * @param array $data Request data
      * @param string|null $resourceid Resource ID for specific operations
@@ -268,9 +267,9 @@ class util {
      * @throws Exception
      */
     public static function stripe_api_request($operation, $data, $resourceid = null) {
-        $endpoint_info = static::get_stripe_endpoint($operation, $resourceid);
-        $method = $endpoint_info['method'];
-        $endpoint = $endpoint_info['endpoint'];
+        $endpointinfo = static::get_stripe_endpoint($operation, $resourceid);
+        $method = $endpointinfo['method'];
+        $endpoint = $endpointinfo['endpoint'];
         $url = 'https://api.stripe.com/v1/' . $endpoint;
 
         $ch = curl_init();
@@ -318,6 +317,16 @@ class util {
         return $decoded;
     }
 
+    /**
+     * Returns a list of Stripe API routes used by this plugin.
+     *
+     * @return array<string, array{
+     *     method: string,
+     *     path: string,
+     *     needs_id: bool,
+     *     message?: string
+     * }>
+     */
     public static function routes() {
         return [
             'coupon_retrieve' => [
@@ -380,7 +389,6 @@ class util {
     /**
      * Make a cURL request to Stripe API with operation-based logic
      *
-     * @param string $method HTTP method (GET, POST, etc.)
      * @param string $operation API operation type
      * @param array $data Request data
      * @param string|null $resourceid Resource ID for specific operations
@@ -388,24 +396,24 @@ class util {
      * @throws Exception
      */
     public static function get_stripe_endpoint($operation, $resourceid = null) {
-        // HTTP method must be the first element
+        // HTTP method must be the first element.
         $routes = static::routes();
-    
+
         if (!isset($routes[$operation])) {
             throw new Exception('Unknown Stripe operation: ' . $operation);
         }
-    
+
         $route = $routes[$operation];
-    
+
         if ($route['needs_id'] && !$resourceid) {
             throw new Exception($route['message']);
         }
-    
+
         return [
             'method'   => $route['method'],
             'endpoint' => $route['needs_id'] ? $route['path'] . $resourceid : $route['path'],
         ];
-    }    
+    }
 
     /**
      * Get stripe amount
