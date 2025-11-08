@@ -30,7 +30,7 @@
  use core_external\external_single_structure;
  use enrol_stripepayment\util;
  use Exception;
- 
+
  /**
   * External enrol function for stripepayment
   *
@@ -253,5 +253,4 @@ class process_payment extends external_api {
             return $response;
         }
     }
-    
 }

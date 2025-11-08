@@ -32,7 +32,7 @@
  use core_external\external_single_structure;
  use enrol_stripepayment\util;
  use Exception;
- 
+
  /**
   * External apply coupon for stripepayment
   *
@@ -41,7 +41,6 @@
   * @copyright  2019 DualCube Team(https://dualcube.com)
   * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
   */
-
 class apply_coupon extends external_api {
     /**
      * Parameter for couponsettings function

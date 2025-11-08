@@ -34,7 +34,7 @@
  use enrol_stripepayment\util;
  use Exception;
  use stdClass;
- 
+
  /**
   * External process payment for stripepayment
   *
@@ -185,8 +185,6 @@ class process_enrolment extends external_api {
 
         return true;
     }
-
-    
 
     /**
      * Send enrollment notifications to students, teachers, and admins
