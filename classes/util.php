@@ -335,11 +335,6 @@ class util {
                 'needs_id' => true,
                 'message'  => 'Coupon ID is required for coupon retrieval',
             ],
-            'coupon_list' => [
-                'method'   => 'GET',
-                'path'     => 'coupons',
-                'needs_id' => false,
-            ],
             'customer_retrieve' => [
                 'method'   => 'GET',
                 'path'     => 'customers/',
@@ -372,16 +367,6 @@ class util {
                 'path'     => 'payment_intents/',
                 'needs_id' => true,
                 'message'  => 'Payment Intent ID is required for payment intent retrieval',
-            ],
-            'payment_method_list' => [
-                'method'   => 'GET',
-                'path'     => 'payment_methods',
-                'needs_id' => false,
-            ],
-            'refund_create' => [
-                'method'   => 'POST',
-                'path'     => 'refunds',
-                'needs_id' => false,
             ],
         ];
     }
