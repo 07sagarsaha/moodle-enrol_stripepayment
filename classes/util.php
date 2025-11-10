@@ -574,4 +574,112 @@ class util {
             }
         }
     }
+
+    /**
+     * Send enrollment notifications to students, teachers, and admins
+     * @param stdClass $course The course object
+     * @param stdClass $context The course context
+     * @param stdClass $user The enrolled user
+     * @param object $plugin The enrollment plugin instance
+     */
+    public static function send_enrollment_notifications($course, $context, $user, $plugin) {
+        global $CFG;
+    
+        // Get teacher.
+        if (
+            $users = get_users_by_capability(
+                $context,
+                'moodle/course:update',
+                'u.*',
+                'u.id ASC',
+                '',
+                '',
+                '',
+                '',
+                false,
+                true
+            )
+        ) {
+            $users = sort_by_roleassignment_authority($users, $context);
+            $teacher = array_shift($users);
+        } else {
+            $teacher = false;
+        }
+
+        // Notification settings.
+        $mailstudents = $plugin->get_config('mailstudents');
+        $mailteachers = $plugin->get_config('mailteachers');
+        $mailadmins   = $plugin->get_config('mailadmins');
+
+        // Common data.
+        $shortname = format_string($course->shortname, true, ['context' => $context]);
+        $coursecontext = context_course::instance($course->id);
+        $sitename = $CFG->wwwroot;
+
+        $orderdetails = (object)[
+            'coursename' => format_string($course->fullname, true, ['context' => $coursecontext]),
+            'course'     => format_string($course->fullname, true, ['context' => $coursecontext]),
+            'user'       => fullname($user),
+        ];
+        $adminsubject = get_string(
+            "enrolmentnew",
+            'enrol_stripepayment',
+            ['username' => fullname($user), 'course' => $course->fullname],
+        );
+        $adminmessage = get_string(
+            'adminmessage',
+            'enrol_stripepayment',
+            ['username' => fullname($user), 'course' => $course->fullname, 'sitename' => $sitename],
+        );
+
+        // Map notification rules.
+        $notifications = [
+            'students' => [
+                'enabled' => !empty($mailstudents),
+                'recipient' => $user,
+                'from' => empty($teacher) ? core_user::get_noreply_user() : $teacher,
+                'subject' => get_string("enrolmentuser", 'enrol_stripepayment', $shortname),
+                'message' => get_string(
+                    'welcometocoursetext',
+                    'enrol_stripepayment',
+                    ['course' => $course->fullname, 'sitename' => $sitename],
+                )
+            ],
+            'teachers' => [
+                'enabled' => !empty($mailteachers) && !empty($teacher),
+                'recipient' => $teacher,
+                'from' => $user,
+                'subject' => $adminsubject,
+                'message' => $adminmessage,
+            ],
+            'admins' => [
+                'enabled' => !empty($mailadmins),
+                'recipient' => get_admins(),
+                'from' => $user,
+                'subject' => $adminsubject,
+                'message' => $adminmessage,
+            ]
+        ];
+    
+        // Loop and send messages.
+        foreach ($notifications as $notify) {
+            if (!$notify['enabled']) {
+                continue;
+            }
+    
+            $fullmessage = $notify['message'];
+            $fullmessagehtml = '<p>' . $fullmessage . '</p>';
+
+            self::send_message(
+                $course,
+                $notify['from'],
+                $notify['recipient'],
+                $notify['subject'],
+                $orderdetails,
+                $shortname,
+                $fullmessage,
+                $fullmessagehtml
+            );
+        }
+    }
 }
