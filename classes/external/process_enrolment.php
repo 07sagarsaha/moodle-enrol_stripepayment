@@ -78,7 +78,7 @@ class process_enrolment extends external_api {
      * @param number $instanceid
      */
     public static function execute($sessionid, $userid, $couponid, $instanceid) {
-        global $DB, $CFG, $PAGE, $OUTPUT;
+        global $CFG, $PAGE, $OUTPUT;
         $data = new stdClass();
 
         $checkoutsession = util::stripe_api_request('checkout_session_retrieve', $sessionid);
