@@ -258,13 +258,13 @@ class util {
     }
 
     /**
-     * Make a cURL request to Stripe API with operation-based logic
+     * Make a cURL request to Stripe API with operation-based logic.
      *
-     * @param string $operation API operation type
-     * @param array|null $data Request data
-     * @param string|null $resourceid Resource ID for specific operations
-     * @return array Response data
-     * @throws Exception
+     * @param string      $operation   Operation key that maps to a Stripe route (e.g., 'coupon_retrieve', 'subscription_create')
+     * @param string|null $resourceid  Optional Stripe resource ID (used when endpoint requires ID)
+     * @param array|null  $data        POST or query parameters sent to Stripe (depending on endpoint method)
+     * @return array Stripe API response decoded as associative array.
+     * @throws Exception If a cURL error occurs, Stripe returns a non-2xx response, or JSON decoding fails.
      */
     public static function stripe_api_request($operation, $resourceid = null, $data = null) {
         $endpointinfo = static::get_stripe_endpoint($operation, $resourceid);
@@ -584,7 +584,7 @@ class util {
      */
     public static function send_enrollment_notifications($course, $context, $user, $plugin) {
         global $CFG;
-    
+
         // Get teacher.
         if (
             $users = get_users_by_capability(
@@ -643,7 +643,7 @@ class util {
                     'welcometocoursetext',
                     'enrol_stripepayment',
                     ['course' => $course->fullname, 'sitename' => $sitename],
-                )
+                ),
             ],
             'teachers' => [
                 'enabled' => !empty($mailteachers) && !empty($teacher),
@@ -658,15 +658,15 @@ class util {
                 'from' => $user,
                 'subject' => $adminsubject,
                 'message' => $adminmessage,
-            ]
+            ],
         ];
-    
+
         // Loop and send messages.
         foreach ($notifications as $notify) {
             if (!$notify['enabled']) {
                 continue;
             }
-    
+
             $fullmessage = $notify['message'];
             $fullmessagehtml = '<p>' . $fullmessage . '</p>';
 
