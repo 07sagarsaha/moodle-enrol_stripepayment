@@ -24,16 +24,13 @@
  */
 
  namespace enrol_stripepayment\external;
- use context_course;
  use core\exception\invalid_parameter_exception;
  use core_external\external_api;
  use core_external\external_function_parameters;
  use core_external\external_value;
  use core_external\external_single_structure;
- use core_user;
  use enrol_stripepayment\util;
  use Exception;
-use PhpParser\Node\Identifier;
 use stdClass;
 
  /**
@@ -135,7 +132,7 @@ class process_enrolment extends external_api {
 
             // Use consolidated enrollment and notification function.
             self::enroll_user_and_send_notifications($plugininstance, $course, $context, $user, $data);
-            $destination = "$CFG->wwwroot/course/view.php?id=$course->id";
+            $destination = $CFG->wwwroot . "/course/view.php?id=" . $course->id;
             $fullname = format_string($course->fullname, true, ['context' => $context]);
             if (is_enrolled($context, $user, '', true)) {
                 redirect($destination, get_string('paymentthanks', '', $fullname));
