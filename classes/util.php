@@ -195,9 +195,9 @@ class util {
     public static function get_mode_status_display() {
         $mode = self::get_stripe_mode();
         $validation = self::validate_current_api_keys();
-    
+
         // Load language strings: moodle_stripepaymentpro.php (lang/en/)
-        // 'status_live', 'status_test', 'status_config_error'
+        // 'status_live', 'status_test', 'status_config_error'.
         if (!$validation['valid']) {
             $messagestr = get_string('statusconfigerror', 'enrol_stripepayment', strtoupper($mode));
             $color = '#d32f2f';
@@ -211,9 +211,9 @@ class util {
             $color = '#388e3c';
             $icon = '🟢';
         }
-    
+
         return "<span style=\"color: {$color}; font-weight: bold;\">{$icon} {$messagestr}</span>";
-    }    
+    }
 
     /**
      * Make a cURL request to Stripe API with operation-based logic.
@@ -326,7 +326,7 @@ class util {
                 'needs_id' => true,
                 'message'  => get_string('errorpaymentintentidrequired', 'enrol_stripepayment'),
             ],
-        ];        
+        ];
     }
 
     /**
@@ -440,7 +440,10 @@ class util {
 
         // Validate user.
         if (!$user = $DB->get_record("user", ["id" => $userid])) {
-            self::message_stripepayment_error_to_admin(get_string('notvalidorderdetails', 'enrol_stripepayment'), ["id" => $userid]);
+            self::message_stripepayment_error_to_admin(
+                get_string('notvalidorderdetails', 'enrol_stripepayment'),
+                ["id" => $userid]
+            );
             redirect($CFG->wwwroot . '/course/view.php?id=' . $course->id);
         }
         return [$plugininstance, $course, $context, $user];

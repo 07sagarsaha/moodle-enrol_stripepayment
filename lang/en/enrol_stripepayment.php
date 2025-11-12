@@ -1,6 +1,3 @@
-$string['modestatuslive'] = '{$a} MODE - Real payments will be processed';
-$string['modestatustest'] = '{$a} MODE - Safe for testing';
-$string['modestatusconfigerror'] = '{$a} MODE - Configuration Error';
 <?php
 // This file is part of Moodle - http://moodle.org/
 //
