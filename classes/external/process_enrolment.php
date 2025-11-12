@@ -24,7 +24,6 @@
  */
 
  namespace enrol_stripepayment\external;
- use core\exception\invalid_parameter_exception;
  use core_external\external_api;
  use core_external\external_function_parameters;
  use core_external\external_value;
@@ -103,8 +102,7 @@ class process_enrolment extends external_api {
         $course = $validateddata[1];
         $context = $validateddata[2];
         $user = $validateddata[3];
-        $courseid = $plugininstance->courseid;
-        $data->courseid = $courseid;
+        $data->courseid = $plugininstance->courseid;
         $data->instanceid = $instanceid;
         $data->userid = (int)$userid;
         $data->timeupdated = time();
@@ -147,7 +145,7 @@ class process_enrolment extends external_api {
             }
         } catch (Exception $e) {
             util::message_stripepayment_error_to_admin($e->getMessage(), ['sessionid' => $sessionid]);
-            throw new invalid_parameter_exception($e->getMessage());
+            throw new Exception($e->getMessage());
         }
     }
 

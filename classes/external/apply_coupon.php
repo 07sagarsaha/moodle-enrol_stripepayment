@@ -25,13 +25,12 @@
 
 
  namespace enrol_stripepayment\external;
- use core\exception\invalid_parameter_exception;
+ use core\exception\moodle_exception;
  use core_external\external_api;
  use core_external\external_function_parameters;
  use core_external\external_value;
  use core_external\external_single_structure;
  use enrol_stripepayment\util;
- use Exception;
 
  /**
   * External apply coupon for stripepayment
@@ -91,21 +90,20 @@ class apply_coupon extends external_api {
 
         // Enhanced input validation.
         if (empty($couponid) || trim($couponid) === '') {
-            throw new invalid_parameter_exception('Coupon code cannot be empty');
+            throw new moodle_exception('couponcodeempty', 'enrol_stripepayment');
         }
 
         if (!is_numeric($instanceid) || $instanceid <= 0) {
-            throw new invalid_parameter_exception('Invalid instance ID format');
+            throw new moodle_exception('invalidinstanceformat', 'enrol_stripepayment');
         }
         $plugininstance = $DB->get_record("enrol", ["id" => $instanceid, "status" => 0]);
         if (!$plugininstance) {
-            throw new invalid_parameter_exception('Enrollment instance not found or disabled');
+            throw new moodle_exception('enrollmentinstancenotfound', 'enrol_stripepayment');
         }
 
         // Validate Stripe configuration.
-        $secretkey = util::get_current_secret_key();
-        if (empty($secretkey)) {
-            throw new invalid_parameter_exception('Stripe configuration incomplete');
+        if (empty(util::get_current_secret_key())) {
+            throw new moodle_exception('stripeconfigurationincomplete', 'enrol_stripepayment');
         }
 
         $defaultcost = (float)util::get_core()->get_config('cost');
@@ -123,12 +121,12 @@ class apply_coupon extends external_api {
 
             // Enhanced coupon validation.
             if (!$coupon || (isset($coupon['valid']) && !$coupon['valid'])) {
-                throw new Exception(get_string('invalidcoupon', 'enrol_stripepayment'));
+                throw new moodle_exception('invalidcoupon', 'enrol_stripepayment');
             }
 
             // Check if coupon has expired.
             if (isset($coupon['redeem_by']) && $coupon['redeem_by'] < time()) {
-                throw new Exception('Coupon has expired');
+                throw new moodle_exception('couponhasexpired', 'enrol_stripepayment');
             }
 
             // Check if coupon has usage limits.
@@ -136,7 +134,7 @@ class apply_coupon extends external_api {
                 isset($coupon['max_redemptions']) && isset($coupon['times_redeemed'])
                 && $coupon['times_redeemed'] >= $coupon['max_redemptions']
             ) {
-                throw new Exception('Coupon usage limit exceeded');
+                throw new moodle_exception('Couponlimitexceeded', 'enrol_stripepayment');
             }
 
             $couponname = $coupon['name'] ?? $couponid;
@@ -149,24 +147,30 @@ class apply_coupon extends external_api {
             } else if (isset($coupon['amount_off'])) {
                 // Ensure currency matches.
                 if (isset($coupon['currency']) && strtoupper($coupon['currency']) !== strtoupper($currency)) {
-                    throw new Exception('Coupon currency does not match course currency');
+                    throw new moodle_exception('couponcurrencymismatch', 'enrol_stripepayment');
                 }
                 $discountamount = $coupon['amount_off'] / 100;
                 $cost -= $discountamount;
                 $coupontype = 'amount_off';
                 $discountvalue = $coupon['amount_off'] / 100;
             } else {
-                throw new Exception('Invalid coupon type');
+                throw new moodle_exception('invalidcoupontype', 'enrol_stripepayment');
             }
 
             // Ensure cost doesn't go negative.
             $cost = max(0, $cost);
             $cost = format_float($cost, 2, false);
             $discountamount = format_float($discountamount, 2, false);
-        } catch (Exception $e) {
+        } catch (moodle_exception $e) {
             // Log the error for debugging.
             debugging('Stripe coupon validation failed: ' . $e->getMessage());
-            throw new invalid_parameter_exception($e->getMessage());
+            throw new moodle_exception(
+                'invalidcoupon',
+                'enrol_stripepaymentpro',
+                '',
+                null,
+                $e->getMessage()
+            );
         }
 
         $minamount = util::minamount($currency);

@@ -28,6 +28,8 @@
 
 use core_enrol\output\enrol_page;
 use enrol_stripepayment\util;
+use core\exception\moodle_exception;
+use core\output\notification;
 
 /**
  * Stripe enrolment plugin implementation.
@@ -115,7 +117,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
      */
     public function add_course_navigation($instancesnode, stdClass $instance) {
         if ($instance->enrol !== 'stripepayment') {
-             throw new coding_exception('Invalid enrol instance type!');
+             throw new moodle_exception('invalidenroltype', 'enrol_stripepayment');
         }
         $context = context_course::instance($instance->courseid);
         if (has_capability('enrol/stripepayment:manage', $context)) {
@@ -139,7 +141,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
     public function get_action_icons(stdClass $instance) {
         global $OUTPUT;
         if ($instance->enrol !== 'stripepayment') {
-            throw new coding_exception('invalid enrol instance!');
+            throw new moodle_exception('invalidenrolinstance', 'enrol_stripepayment');
         }
         $context = context_course::instance($instance->courseid);
         $icons = [];
@@ -182,7 +184,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
 
         $enrolstatus = util::can_stripepayment_enrol($instance);
         if (!$enrolstatus) {
-            $notification = new \core\output\notification(get_string('maxenrolledreached', 'enrol_stripepayment'), 'error', false);
+            $notification = new notification(get_string('maxenrolledreached', 'enrol_stripepayment'), 'error', false);
             $notification->set_extra_classes(['mb-0']);
             $enrolpage = new enrol_page(
                 instance: $instance,
@@ -198,7 +200,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
 
         // Check enrollment date restrictions and show appropriate messages.
         if ($instance->enrolstartdate != 0 && $instance->enrolstartdate > time()) {
-            $notification = new \core\output\notification(
+            $notification = new notification(
                 get_string('canntenrolearly', 'enrol_stripepayment', userdate($instance->enrolstartdate)),
                 'info',
                 false
@@ -213,7 +215,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         }
 
         if ($instance->enrolenddate != 0 && $instance->enrolenddate < time()) {
-            $notification = new \core\output\notification(
+            $notification = new notification(
                 get_string('canntenrollate', 'enrol_stripepayment', userdate($instance->enrolenddate)),
                 'error',
                 false
@@ -228,7 +230,6 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         }
 
         $course = $DB->get_record('course', ['id' => $instance->courseid]);
-        $context = context_course::instance($course->id);
 
         $cost = ((float) $instance->cost <= 0) ? (float) $this->get_config('cost') : (float) $instance->cost;
 
@@ -238,7 +239,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         // Check if current API keys can access the products/prices for this instance.
         $validation = $this->validate_instance_accessibility($instance);
         if (!$validation['accessible']) {
-            $notification = new \core\output\notification(
+            $notification = new notification(
                 get_string('paymentmethodnotfound', 'enrol_stripepayment'),
                 'error',
                 false
@@ -256,7 +257,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         $templatedata = [
             'currency' => $instance->currency,
             'cost' => format_float($cost, 2, true),
-            'coursename' => format_string($course->fullname, true, ['context' => $context]),
+            'coursename' => format_string($course->fullname, true, ['context' => context_course::instance($course->id)]),
             'instanceid' => $instance->id,
             'wwwroot' => $CFG->wwwroot,
             'enrolbtncolor' => $this->get_config('enrolbtncolor'),
@@ -565,7 +566,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
             }
 
             // Now validate the cost value.
-            $currency = isset($data['currency']) ? $data['currency'] : 'USD';
+            $currency = $data['currency'] ?? 'USD';
 
             // Minimum amounts for different currencies.
             $minamount = util::minamount($currency);

@@ -127,7 +127,6 @@ class process_payment extends external_api {
         $courseid = $plugininstance->courseid;
         $currency = $plugininstance->currency;
         $description  = format_string($course->fullname, true, ['context' => $context]);
-        $shortname = format_string($course->shortname, true, ['context' => $context]);
         if (empty($secretkey) || empty($courseid) || empty($amount) || empty($currency) || empty($description)) {
             redirect($CFG->wwwroot . '/course/view.php?id=' . $courseid);
         } else {
@@ -214,7 +213,7 @@ class process_payment extends external_api {
                     ]],
                     'discounts' => [['coupon' => $couponid]],
                     'metadata' => [
-                        'course_shortname' => $shortname,
+                        'course_shortname' => format_string($course->shortname, true, ['context' => $context]),
                         'course_id' => $course->id,
                         'couponid' => $couponid,
                     ],

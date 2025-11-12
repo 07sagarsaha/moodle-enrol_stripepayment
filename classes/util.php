@@ -28,6 +28,7 @@ namespace enrol_stripepayment;
 
 use context_course;
 use context_system;
+use core\exception\moodle_exception;
 use core\lang_string;
 use core_user;
 use Exception;
@@ -49,56 +50,6 @@ class util {
      */
     public static function get_core() {
         return enrol_get_plugin('stripepayment');
-    }
-
-    /**
-     * Return Currency as per country code
-     *
-     * @param integer $currency the country code
-     * @return Country currency sign
-     */
-    public static function show_currency_symbol($currency) {
-        $currencies = [
-            'aed' => 'AED', 'afn' => '&#1547;', 'all' => '&#76;&#101;&#107;',
-            'amd' => 'AMD', 'ang' => '&#402;', 'aoa' => 'AOA', 'ars' => '&#36;',
-            'aud' => '&#36;', 'awg' => '&#402;', 'azn' => '&#1084;&#1072;&#1085;',
-            'bam' => '&#75;&#77;', 'bbd' => '&#36;', 'bdt' => 'BDT', 'bgn' => '&#1083;&#1074;',
-            'bhd' => 'BHD', 'bif' => 'BIF', 'bmd' => '&#36;', 'bnd' => '&#36;',
-            'bob' => '&#36;&#98;', 'brl' => '&#82;&#36;', 'bsd' => '&#36;', 'btn' => 'BTN',
-            'bwp' => '&#80;', 'byr' => '&#112;&#46;', 'bzd' => '&#66;&#90;&#36;',
-            'cad' => '&#36;', 'cdf' => 'CDF', 'chf' => '&#67;&#72;&#70;', 'clp' => '&#36;',
-            'cny' => '&#165;', 'cop' => '&#36;', 'crc' => '&#8353;', 'cuc' => 'CUC', 'cup' => '&#8369;',
-            'cve' => 'CVE', 'czk' => '&#75;&#269;', 'djf' => 'DJF', 'dkk' => '&#107;&#114;',
-            'dop' => '&#82;&#68;&#36;', 'dzd' => 'DZD', 'egp' => '&#163;', 'ern' => 'ERN', 'etb' => 'ETB',
-            'eur' => '&#8364;', 'fjd' => '&#36;', 'fkp' => '&#163;', 'gbp' => '&#163;', 'gel' => 'GEL',
-            'ggp' => '&#163;', 'ghs' => '&#162;', 'gip' => '&#163;', 'gmd' => 'GMD', 'gnf' => 'GNF',
-            'gtq' => '&#81;', 'gyd' => '&#36;', 'hkd' => '&#36;', 'hnl' => '&#76;', 'hrk' => '&#107;&#110;',
-            'htg' => 'HTG', 'huf' => '&#70;&#116;', 'idr' => '&#82;&#112;', 'ils' => '&#8362;',
-            'imp' => '&#163;', 'inr' => '&#8377;', 'iqd' => 'IQD', 'irr' => '&#65020;', 'isk' => '&#107;&#114;',
-            'jep' => '&#163;', 'jmd' => '&#74;&#36;', 'jod' => 'JOD', 'jpy' => '&#165;',
-            'kes' => 'KES', 'kgs' => '&#1083;&#1074;', 'khr' => '&#6107;', 'kmf' => 'KMF', 'kpw' => '&#8361;',
-            'krw' => '&#8361;', 'kwd' => 'KWD', 'kyd' => '&#36;', 'kzt' => '&#1083;&#1074;',
-            'lak' => '&#8365;', 'lbp' => '&#163;', 'lkr' => '&#8360;', 'lrd' => '&#36;', 'lsl' => 'LSL',
-            'lyd' => 'LYD', 'mad' => 'MAD', 'mdl' => 'MDL', 'mga' => 'MGA', 'mkd' => '&#1076;&#1077;&#1085;',
-            'mmk' => 'MMK', 'mnt' => '&#8366;', 'mop' => 'MOP', 'mro' => 'MRO', 'mur' => '&#8360;',
-            'mvr' => 'MVR', 'mwk' => 'MWK', 'mxn' => '&#36;', 'myr' => '&#82;&#77;', 'mzn' => '&#77;&#84;',
-            'nad' => '&#36;', 'ngn' => '&#8358;', 'nio' => '&#67;&#36;', 'nok' => '&#107;&#114;', 'npr' => '&#8360;',
-            'nzd' => '&#36;', 'omr' => '&#65020;', 'pab' => '&#66;&#47;&#46;', 'pen' => '&#83;&#47;&#46;',
-            'pgk' => 'PGK', 'php' => '&#8369;', 'pkr' => '&#8360;', 'pln' => '&#122;&#322;', 'prb' => 'PRB',
-            'pyg' => '&#71;&#115;', 'qar' => '&#65020;', 'ron' => '&#108;&#101;&#105;', 'rsd' => '&#1044;&#1080;&#1085;&#46;',
-            'rub' => '&#1088;&#1091;&#1073;', 'rwf' => 'RWF', 'sar' => '&#65020;', 'sbd' => '&#36;', 'scr' => '&#8360;',
-            'sdg' => 'SDG', 'sek' => '&#107;&#114;', 'sgd' => '&#36;', 'shp' => '&#163;', 'sll' => 'SLL', 'sos' => '&#83;',
-            'srd' => '&#36;', 'ssp' => 'SSP', 'std' => 'STD', 'syp' => '&#163;', 'szl' => 'SZL', 'thb' => '&#3647;', 'tjs' => 'TJS',
-            'tmt' => 'TMT', 'tnd' => 'TND', 'top' => 'TOP', 'try' => '&#8378;', 'ttd' => '&#84;&#84;&#36;',
-            'twd' => '&#78;&#84;&#36;',
-            'tzs' => 'TZS', 'uah' => '&#8372;', 'ugx' => 'UGX', 'usd' => '&#36;', 'uyu' => '&#36;&#85;',
-            'uzs' => '&#1083;&#1074;',
-            'vef' => '&#66;&#115;', 'vnd' => '&#8363;', 'vuv' => 'VUV', 'wst' => 'WST', 'xaf' => 'XAF',
-            'xcd' => '&#36;', 'xof' => 'XOF',
-            'xpf' => 'XPF', 'yer' => '&#65020;', 'zar' => '&#82;', 'zmw' => 'ZMW',
-        ];
-        $symbol = (array_key_exists($currency, $currencies)) ? $currencies[$currency] : $currency;
-        return $symbol;
     }
 
     /**
@@ -129,8 +80,8 @@ class util {
     /**
      * Creates can stripepayament enrol.
      *
-     * @param stdClass $instance
-     * @return string html text, usually a form in a text box
+     * @param stdClass $instance enrol instance
+     * @return bool html text, usually a form in a text box
      */
     public static function can_stripepayment_enrol(stdClass $instance) {
         global $DB;
@@ -244,18 +195,25 @@ class util {
     public static function get_mode_status_display() {
         $mode = self::get_stripe_mode();
         $validation = self::validate_current_api_keys();
-
+    
+        // Load language strings: moodle_stripepaymentpro.php (lang/en/)
+        // 'status_live', 'status_test', 'status_config_error'
         if (!$validation['valid']) {
-            return '<span style="color: #d32f2f; font-weight: bold;">⚠️ '
-            . strtoupper($mode) . ' MODE - Configuration Error</span>';
-        }
-
-        if ($mode === 'live') {
-            return '<span style="color: #d32f2f; font-weight: bold;">🔴 LIVE MODE - Real payments will be processed</span>';
+            $messagestr = get_string('statusconfigerror', 'enrol_stripepayment', strtoupper($mode));
+            $color = '#d32f2f';
+            $icon = '⚠️';
+        } else if ($mode === 'live') {
+            $messagestr = get_string('statuslive', 'enrol_stripepayment');
+            $color = '#d32f2f';
+            $icon = '🔴';
         } else {
-            return '<span style="color: #388e3c; font-weight: bold;">🟢 TEST MODE - Safe for testing</span>';
+            $messagestr = get_string('statustest', 'enrol_stripepayment');
+            $color = '#388e3c';
+            $icon = '🟢';
         }
-    }
+    
+        return "<span style=\"color: {$color}; font-weight: bold;\">{$icon} {$messagestr}</span>";
+    }    
 
     /**
      * Make a cURL request to Stripe API with operation-based logic.
@@ -300,18 +258,18 @@ class util {
         curl_close($ch);
 
         if ($curlerror) {
-            throw new Exception('cURL error: ' . $curlerror);
+            throw new moodle_exception('crlerror', 'enrol_stripepayment', '', $curlerror);
         }
 
         $decoded = json_decode($response, true);
 
         if ($httpcode >= 400) {
             $error = isset($decoded['error']['message']) ? $decoded['error']['message'] : 'Unknown error';
-            throw new Exception('Stripe API error: ' . $error . ' (HTTP ' . $httpcode . ')');
+            throw new moodle_exception('stripeapierror', 'enrol_stripepayment', '', $error);
         }
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('Invalid JSON response from Stripe');
+            throw new moodle_exception('invalidjson', 'enrol_stripepayment');
         }
 
         return $decoded;
@@ -333,13 +291,13 @@ class util {
                 'method'   => 'GET',
                 'path'     => 'coupons/',
                 'needs_id' => true,
-                'message'  => 'Coupon ID is required for coupon retrieval',
+                'message'  => get_string('errorcouponidrequired', 'enrol_stripepayment'),
             ],
             'customer_retrieve' => [
                 'method'   => 'GET',
                 'path'     => 'customers/',
                 'needs_id' => true,
-                'message'  => 'Customer ID is required for customer retrieval',
+                'message'  => get_string('errorcustomeridrequired', 'enrol_stripepayment'),
             ],
             'customer_list' => [
                 'method'   => 'GET',
@@ -360,15 +318,15 @@ class util {
                 'method'   => 'GET',
                 'path'     => 'checkout/sessions/',
                 'needs_id' => true,
-                'message'  => 'Session ID is required for checkout session retrieval',
+                'message'  => get_string('errorsessionidrequired', 'enrol_stripepayment'),
             ],
             'payment_intent_retrieve' => [
                 'method'   => 'GET',
                 'path'     => 'payment_intents/',
                 'needs_id' => true,
-                'message'  => 'Payment Intent ID is required for payment intent retrieval',
+                'message'  => get_string('errorpaymentintentidrequired', 'enrol_stripepayment'),
             ],
-        ];
+        ];        
     }
 
     /**
@@ -384,7 +342,7 @@ class util {
         $routes = static::routes();
 
         if (!isset($routes[$operation])) {
-            throw new Exception('Unknown Stripe operation: ' . $operation);
+            throw new moodle_exception('unknownstripeoperation', 'enrol_stripepayment', '', $operation);
         }
 
         $route = $routes[$operation];
@@ -482,7 +440,7 @@ class util {
 
         // Validate user.
         if (!$user = $DB->get_record("user", ["id" => $userid])) {
-            self::message_stripepayment_error_to_admin("Not orderdetails valid user id", ["id" => $userid]);
+            self::message_stripepayment_error_to_admin(get_string('notvalidorderdetails', 'enrol_stripepayment'), ["id" => $userid]);
             redirect($CFG->wwwroot . '/course/view.php?id=' . $course->id);
         }
         return [$plugininstance, $course, $context, $user];
@@ -499,11 +457,11 @@ class util {
 
         $admin = get_admin();
         $site = get_site();
-        $messagebody = "$site->fullname:  Transaction failed.\n\n$subject\n\n";
+        $messagebody = $site->fullname . ": " . get_string('transactionfailed', 'enrol_stripepayment') . "\n\n";
         foreach ($data as $key => $value) {
             $messagebody .= s($key) . " => " . s($value) . "\n";
         }
-        $messagesubject = "STRIPE PAYMENT ERROR: " . $subject;
+        $messagesubject = get_string('stripeapierror', 'enrol_stripepayment', $subject);
         $fullmessage = $messagebody;
         $fullmessagehtml = '<p>' . nl2br(s($messagebody)) . '</p>';
 
@@ -518,7 +476,7 @@ class util {
         $message->fullmessage = $fullmessage;
         $message->fullmessageformat = FORMAT_PLAIN;
         $message->fullmessagehtml = $fullmessagehtml;
-        $message->smallmessage = 'Stripe payment error occurred';
+        $message->smallmessage = get_string('stripepaymenterroroccurred', 'enrol_stripepayment');
         $message->notification = 1;
         $message->contexturl = new \core\url('/admin/index.php');
         $message->contexturlname = 'Site administration';
