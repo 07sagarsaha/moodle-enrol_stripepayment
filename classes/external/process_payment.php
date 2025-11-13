@@ -85,14 +85,14 @@ class process_payment extends external_api {
         if (!is_numeric($userid) || $userid <= 0) {
             return [
                 'status' => 0,
-                'error' => ['message' => 'Invalid user ID'],
+                'error' => ['message' => get_string('invaliduserid', 'enrol_stripepayment')],
             ];
         }
 
         if (!is_numeric($instanceid) || $instanceid <= 0) {
             return [
                 'status' => 0,
-                'error' => ['message' => 'Invalid instance ID'],
+                'error' => ['message' => get_string('invalidinstanceid', 'enrol_stripepayment')],
             ];
         }
 
@@ -103,7 +103,7 @@ class process_payment extends external_api {
         if (empty($secretkey)) {
             return [
                 'status' => 0,
-                'error' => ['message' => 'Stripe configuration incomplete'],
+                'error' => ['message' => get_string('stripeconfigincomplete', 'enrol_stripepayment')],
             ];
         }
 
@@ -117,7 +117,7 @@ class process_payment extends external_api {
         } catch (Exception $e) {
             return [
                 'status' => 0,
-                'error' => ['message' => 'Validation failed: ' . $e->getMessage()],
+                'error' => ['message' => get_string('validationfailed', 'enrol_stripepayment', $e->getMessage())],
             ];
         }
 
@@ -136,6 +136,7 @@ class process_payment extends external_api {
                     'message' => get_string('invalidrequest', 'enrol_stripepayment'),
                 ],
             ];
+
             // Retrieve Stripe customer_id if previously set.
             $checkcustomer = $DB->get_record('enrol_stripepayment', ['receiveremail' => $user->email], '*', IGNORE_MISSING);
             $receiverid = $checkcustomer ? $checkcustomer->receiverid : null;
@@ -186,7 +187,7 @@ class process_payment extends external_api {
                 } catch (Exception $e) {
                     return [
                         'status' => 0,
-                        'error' => ['message' => 'Could not create customer in Stripe: ' . $e->getMessage()],
+                        'error' => ['message' => get_string('stripecreatecustomerfailed', 'enrol_stripepayment', $e->getMessage())],
                     ];
                 }
             }

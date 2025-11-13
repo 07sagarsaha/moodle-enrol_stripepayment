@@ -166,7 +166,7 @@ class apply_coupon extends external_api {
             debugging('Stripe coupon validation failed: ' . $e->getMessage());
             // Re-throw the same exception (no need to wrap it again).
             throw $e;
-        }        
+        }
 
         $minamount = util::minamount($currency);
 

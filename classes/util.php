@@ -159,25 +159,25 @@ class util {
         $errors = [];
 
         if (empty($keys['secret'])) {
-            $errors[] = 'Secret key is missing for ' . $keys['mode'] . ' mode';
+            $errors[] = get_string('error_missing_secret_key', 'enrol_stripepayment', $keys['mode']);
         }
 
         if (empty($keys['publishable'])) {
-            $errors[] = 'Publishable key is missing for ' . $keys['mode'] . ' mode';
+            $errors[] = get_string('error_missing_publishable_key', 'enrol_stripepayment', $keys['mode']);
         }
 
         // Validate key format.
         if (!empty($keys['secret'])) {
             $expectedprefix = $keys['mode'] === 'live' ? 'sk_live_' : 'sk_test_';
             if (strpos($keys['secret'], $expectedprefix) !== 0) {
-                $errors[] = 'Secret key format is incorrect for ' . $keys['mode'] . ' mode';
+                $errors[] = get_string('error_invalid_secret_key_format', 'enrol_stripepayment', $keys['mode']);
             }
         }
 
         if (!empty($keys['publishable'])) {
             $expectedprefix = $keys['mode'] === 'live' ? 'pk_live_' : 'pk_test_';
             if (strpos($keys['publishable'], $expectedprefix) !== 0) {
-                $errors[] = 'Publishable key format is incorrect for ' . $keys['mode'] . ' mode';
+                $errors[] = get_string('error_invalid_publishable_key_format', 'enrol_stripepayment', $keys['mode']);
             }
         }
 
