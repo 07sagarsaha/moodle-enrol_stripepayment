@@ -134,7 +134,7 @@ class apply_coupon extends external_api {
                 isset($coupon['max_redemptions']) && isset($coupon['times_redeemed'])
                 && $coupon['times_redeemed'] >= $coupon['max_redemptions']
             ) {
-                throw new moodle_exception('Couponlimitexceeded', 'enrol_stripepayment');
+                throw new moodle_exception('couponlimitexceeded', 'enrol_stripepayment');
             }
 
             $couponname = $coupon['name'] ?? $couponid;
@@ -162,16 +162,11 @@ class apply_coupon extends external_api {
             $cost = format_float($cost, 2, false);
             $discountamount = format_float($discountamount, 2, false);
         } catch (moodle_exception $e) {
-            // Log the error for debugging.
+            // Log the specific coupon validation error for debugging.
             debugging('Stripe coupon validation failed: ' . $e->getMessage());
-            throw new moodle_exception(
-                'invalidcoupon',
-                'enrol_stripepaymentpro',
-                '',
-                null,
-                $e->getMessage()
-            );
-        }
+            // Re-throw the same exception (no need to wrap it again).
+            throw $e;
+        }        
 
         $minamount = util::minamount($currency);
 
