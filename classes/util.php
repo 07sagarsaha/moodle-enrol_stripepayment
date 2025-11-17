@@ -263,15 +263,16 @@ class util {
 
         $decoded = json_decode($response, true);
 
-        if ($httpcode >= 400) {
-            $error = isset($decoded['error']['message']) ? $decoded['error']['message'] : 'Unknown error';
-            throw new moodle_exception('stripeapierror', 'enrol_stripepayment', '', $error);
+        // Any non-200 HTTP response → throw exception.
+        if ($httpcode !== 200) {
+            $errmsg = isset($decoded['error']['message'])
+                ? $decoded['error']['message']
+                : 'Unknown Stripe API error';
+
+            throw new moodle_exception('stripeapierror', 'enrol_stripepayment', '', $errmsg);
         }
 
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new moodle_exception('invalidjson', 'enrol_stripepayment');
-        }
-
+        // Success → return decoded response.
         return $decoded;
     }
 

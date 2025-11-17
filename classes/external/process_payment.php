@@ -81,14 +81,13 @@ class process_payment extends external_api {
     public static function execute($userid, $couponid, $instanceid) {
         global $CFG, $DB;
 
-        // Input validation.
+        // Validate inputs.
         if (!is_numeric($userid) || $userid <= 0) {
             return [
                 'status' => 0,
                 'error' => ['message' => get_string('invaliduserid', 'enrol_stripepayment')],
             ];
         }
-
         if (!is_numeric($instanceid) || $instanceid <= 0) {
             return [
                 'status' => 0,
@@ -99,7 +98,6 @@ class process_payment extends external_api {
         $secretkey = util::get_current_secret_key();
         $usertoken = util::get_core()->get_config('webservice_token');
 
-        // Validate Stripe configuration.
         if (empty($secretkey)) {
             return [
                 'status' => 0,
@@ -107,13 +105,9 @@ class process_payment extends external_api {
             ];
         }
 
-        // Validate users, course, context, plugininstance.
+        // Validate user, course, plugin instance.
         try {
-            $validateddata = util::validate_data($userid, $instanceid);
-            $plugininstance = $validateddata[0];
-            $course = $validateddata[1];
-            $context = $validateddata[2];
-            $user = $validateddata[3];
+            [$plugininstance, $course, $context, $user] = util::validate_data($userid, $instanceid);
         } catch (Exception $e) {
             return [
                 'status' => 0,
@@ -121,134 +115,89 @@ class process_payment extends external_api {
             ];
         }
 
-        // Calculate final cost after coupon application and retrieve coupon details.
-        $finalcost = $plugininstance->cost;
-        $amount = util::get_stripe_amount($finalcost, $plugininstance->currency, false);
-        $courseid = $plugininstance->courseid;
-        $currency = $plugininstance->currency;
-        $description  = format_string($course->fullname, true, ['context' => $context]);
-        if (empty($secretkey) || empty($courseid) || empty($amount) || empty($currency) || empty($description)) {
-            redirect($CFG->wwwroot . '/course/view.php?id=' . $courseid);
-        } else {
-            $response = [
-                'status' => 0,
-                'error' => [
-                    'message' => get_string('invalidrequest', 'enrol_stripepayment'),
-                ],
-            ];
+        $amount = util::get_stripe_amount($plugininstance->cost, $plugininstance->currency, false);
+        $description = format_string($course->fullname, true, ['context' => $context]);
 
-            // Retrieve Stripe customer_id if previously set.
-            $checkcustomer = $DB->get_record('enrol_stripepayment', ['receiveremail' => $user->email], '*', IGNORE_MISSING);
-            $receiverid = $checkcustomer ? $checkcustomer->receiverid : null;
-
-            if ($receiverid) {
-                try {
-                    // Attempt to retrieve customer with the existing ID.
-                    util::stripe_api_request('customer_retrieve', $receiverid);
-                } catch (Exception $e) {
-                    if (
-                        strpos($e->getMessage(), 'No such customer') !== false
-                        || strpos($e->getMessage(), 'You do not have access') !== false
-                    ) {
-                        // Customer doesn't exist or inaccessible with current API key.
-                        $receiverid = null;
-                    } else {
-                        throw $e; // Some other error, rethrow.
-                    }
-                }
-            } else {
-                try {
-                    $customers = util::stripe_api_request('customer_list', '', ['email' => $user->email]);
-                    if (!empty($customers['data'])) {
-                        $receiverid = $customers['data'][0]['id'];
-                    } else {
-                        $newcustomer = util::stripe_api_request(
-                            'customer_create',
-                            'customer',
-                            [
-                                'email' => $user->email,
-                                'name' => fullname($user),
-                            ]
-                        );
-                        $receiverid = $newcustomer['id'];
-                    }
-
-                    if ($checkcustomer) {
-                        $DB->set_field('enrol_stripepayment', 'receiverid', $receiverid, ['receiveremail' => $user->email]);
-                    } else {
-                        // Save a new minimal record to store receiverid for this user.
-                        $DB->insert_record('enrol_stripepayment', [
-                            'receiveremail' => $user->email,
-                            'receiverid' => $receiverid,
-                            'userid' => $user->id,
-                            'timeupdated' => time(),
-                        ]);
-                    }
-                } catch (Exception $e) {
-                    return [
-                        'status' => 0,
-                        'error' => ['message' => get_string('stripecreatecustomerfailed', 'enrol_stripepayment', $e->getMessage())],
-                    ];
-                }
-            }
-
-            // Create new Checkout Session for the order.
-            try {
-                $sessionparams = [
-                    'customer' => $receiverid,
-                    'payment_intent_data' => ['description' => $description],
-                    'payment_method_types' => ['card'],
-                    'line_items' => [[
-                        'price_data' => [
-                            'product_data' => [
-                                'name' => $description,
-                                'metadata' => [
-                                    'pro_id' => $courseid,
-                                ],
-                                'description' => $description,
-                            ],
-                            'unit_amount' => $amount,
-                            'currency' => $currency,
-                        ],
-                        'quantity' => 1,
-                    ]],
-                    'discounts' => [['coupon' => $couponid]],
-                    'metadata' => [
-                        'course_shortname' => format_string($course->shortname, true, ['context' => $context]),
-                        'course_id' => $course->id,
-                        'couponid' => $couponid,
-                    ],
-                    'mode' => 'payment',
-                    'success_url' => $CFG->wwwroot . '/webservice/rest/server.php?wstoken=' . $usertoken
-                        . '&wsfunction=moodle_stripepayment_process_enrolment'
-                        . '&moodlewsrestformat=json'
-                        . '&sessionid={CHECKOUT_SESSION_ID}'
-                        . '&userid=' . $userid
-                        . '&couponid=' . $couponid
-                        . '&instanceid=' . $instanceid,
-                    'cancel_url' => $CFG->wwwroot . '/course/view.php?id=' . $courseid,
-                ];
-
-                $session = util::stripe_api_request('checkout_session_create', '', $sessionparams);
-            } catch (Exception $e) {
-                $apierror = $e->getMessage();
-            }
-            if (empty($apierror) && $session) {
-                $response = [
-                    'status' => 'success',
-                    'redirecturl' => $session['url'], // Stripe Checkout URL.
-                    'error' => [],
-                ];
-            } else {
-                $response = [
-                    'status' => 0,
-                    'redirecturl' => null,
-                    'error' => [
-                        'message' => $apierror,
-                    ],
-                ];
-            }
-            return $response;
+        if (empty($amount) || empty($plugininstance->currency) || empty($plugininstance->courseid)) {
+            redirect($CFG->wwwroot . '/course/view.php?id=' . $plugininstance->courseid);
         }
+
+        // Get existing Stripe customer record.
+        $customerrecord = $DB->get_record('enrol_stripepayment', ['receiveremail' => $user->email], '*', IGNORE_MISSING);
+        $receiverid = $customerrecord ? $customerrecord->receiverid : null;
+
+        // Validate or create customer.
+        if ($receiverid) {
+            // Throws exception automatically if invalid.
+            util::stripe_api_request('customer_retrieve', $receiverid);
+        } else {
+            $customers = util::stripe_api_request('customer_list', '', ['email' => $user->email]);
+
+            if (!empty($customers['data'])) {
+                $receiverid = $customers['data'][0]['id'] ?? null;
+            } else {
+                $newcustomer = util::stripe_api_request('customer_create', '', [
+                    'email' => $user->email,
+                    'name' => fullname($user),
+                ]);
+                $receiverid = $newcustomer['id'] ?? null;
+            }
+
+            // Save customer in DB.
+            if ($receiverid) {
+                if ($customerrecord) {
+                    $DB->set_field('enrol_stripepayment', 'receiverid', $receiverid, ['receiveremail' => $user->email]);
+                } else {
+                    $DB->insert_record('enrol_stripepayment', [
+                        'receiveremail' => $user->email,
+                        'receiverid' => $receiverid,
+                        'userid' => $user->id,
+                        'timeupdated' => time(),
+                    ]);
+                }
+            }
+        }
+
+        // Create Checkout Session.
+        $sessionparams = [
+            'customer' => $receiverid,
+            'payment_intent_data' => ['description' => $description],
+            'payment_method_types' => ['card'],
+            'line_items' => [[
+                'price_data' => [
+                    'product_data' => [
+                        'name' => $description,
+                        'metadata' => ['pro_id' => $plugininstance->courseid],
+                        'description' => $description,
+                    ],
+                    'unit_amount' => $amount,
+                    'currency' => $plugininstance->currency,
+                ],
+                'quantity' => 1,
+            ]],
+            'discounts' => [['coupon' => $couponid]],
+            'metadata' => [
+                'course_shortname' => format_string($course->shortname, true, ['context' => $context]),
+                'course_id' => $course->id,
+                'couponid' => $couponid,
+            ],
+            'mode' => 'payment',
+            'success_url' => $CFG->wwwroot . '/webservice/rest/server.php?wstoken=' . $usertoken
+                . '&wsfunction=moodle_stripepayment_process_enrolment'
+                . '&moodlewsrestformat=json'
+                . '&sessionid={CHECKOUT_SESSION_ID}'
+                . '&userid=' . $userid
+                . '&couponid=' . $couponid
+                . '&instanceid=' . $instanceid,
+            'cancel_url' => $CFG->wwwroot . '/course/view.php?id=' . $plugininstance->courseid,
+        ];
+
+        $session = util::stripe_api_request('checkout_session_create', '', $sessionparams);
+
+        return [
+            'status' => 'success',
+            'redirecturl' => $session['url'],
+            'error' => [],
+        ];
     }
 }

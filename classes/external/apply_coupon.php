@@ -116,57 +116,50 @@ class apply_coupon extends external_api {
         $discountvalue = 0;
         $discountamount = 0;
 
-        try {
-            $coupon = util::stripe_api_request('coupon_retrieve', $couponid);
+        $coupon = util::stripe_api_request('coupon_retrieve', $couponid);
 
-            // Enhanced coupon validation.
-            if (!$coupon || (isset($coupon['valid']) && !$coupon['valid'])) {
-                throw new moodle_exception('invalidcoupon', 'enrol_stripepayment');
-            }
-
-            // Check if coupon has expired.
-            if (isset($coupon['redeem_by']) && $coupon['redeem_by'] < time()) {
-                throw new moodle_exception('couponhasexpired', 'enrol_stripepayment');
-            }
-
-            // Check if coupon has usage limits.
-            if (
-                isset($coupon['max_redemptions']) && isset($coupon['times_redeemed'])
-                && $coupon['times_redeemed'] >= $coupon['max_redemptions']
-            ) {
-                throw new moodle_exception('couponlimitexceeded', 'enrol_stripepayment');
-            }
-
-            $couponname = $coupon['name'] ?? $couponid;
-
-            if (isset($coupon['percent_off'])) {
-                $discountamount = $cost * ($coupon['percent_off'] / 100);
-                $cost -= $discountamount;
-                $coupontype = 'percent_off';
-                $discountvalue = $coupon['percent_off'];
-            } else if (isset($coupon['amount_off'])) {
-                // Ensure currency matches.
-                if (isset($coupon['currency']) && strtoupper($coupon['currency']) !== strtoupper($currency)) {
-                    throw new moodle_exception('couponcurrencymismatch', 'enrol_stripepayment');
-                }
-                $discountamount = $coupon['amount_off'] / 100;
-                $cost -= $discountamount;
-                $coupontype = 'amount_off';
-                $discountvalue = $coupon['amount_off'] / 100;
-            } else {
-                throw new moodle_exception('invalidcoupontype', 'enrol_stripepayment');
-            }
-
-            // Ensure cost doesn't go negative.
-            $cost = max(0, $cost);
-            $cost = format_float($cost, 2, false);
-            $discountamount = format_float($discountamount, 2, false);
-        } catch (moodle_exception $e) {
-            // Log the specific coupon validation error for debugging.
-            debugging('Stripe coupon validation failed: ' . $e->getMessage());
-            // Re-throw the same exception (no need to wrap it again).
-            throw $e;
+        // Enhanced coupon validation.
+        if (!$coupon || (isset($coupon['valid']) && !$coupon['valid'])) {
+            throw new moodle_exception('invalidcoupon', 'enrol_stripepayment');
         }
+
+        // Check if coupon has expired.
+        if (isset($coupon['redeem_by']) && $coupon['redeem_by'] < time()) {
+            throw new moodle_exception('couponhasexpired', 'enrol_stripepayment');
+        }
+
+        // Check if coupon has usage limits.
+        if (
+            isset($coupon['max_redemptions']) && isset($coupon['times_redeemed'])
+            && $coupon['times_redeemed'] >= $coupon['max_redemptions']
+        ) {
+            throw new moodle_exception('couponlimitexceeded', 'enrol_stripepayment');
+        }
+
+        $couponname = $coupon['name'] ?? $couponid;
+
+        if (isset($coupon['percent_off'])) {
+            $discountamount = $cost * ($coupon['percent_off'] / 100);
+            $cost -= $discountamount;
+            $coupontype = 'percent_off';
+            $discountvalue = $coupon['percent_off'];
+        } else if (isset($coupon['amount_off'])) {
+            // Ensure currency matches.
+            if (isset($coupon['currency']) && strtoupper($coupon['currency']) !== strtoupper($currency)) {
+                throw new moodle_exception('couponcurrencymismatch', 'enrol_stripepayment');
+            }
+            $discountamount = $coupon['amount_off'] / 100;
+            $cost -= $discountamount;
+            $coupontype = 'amount_off';
+            $discountvalue = $coupon['amount_off'] / 100;
+        } else {
+            throw new moodle_exception('invalidcoupontype', 'enrol_stripepayment');
+        }
+
+        // Ensure cost doesn't go negative.
+        $cost = max(0, $cost);
+        $cost = format_float($cost, 2, false);
+        $discountamount = format_float($discountamount, 2, false);
 
         $minamount = util::minamount($currency);
 

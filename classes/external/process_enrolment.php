@@ -24,7 +24,8 @@
  */
 
  namespace enrol_stripepayment\external;
- use core_external\external_api;
+ use core\exception\moodle_exception;
+use core_external\external_api;
  use core_external\external_function_parameters;
  use core_external\external_value;
  use core_external\external_single_structure;
@@ -77,16 +78,18 @@ class process_enrolment extends external_api {
         global $CFG, $PAGE, $OUTPUT;
         $data = new stdClass();
 
+        // Retrieve checkout session.
         $checkoutsession = util::stripe_api_request('checkout_session_retrieve', $sessionid);
 
         // For 100% discount, no payment_intent is created.
         if (!empty($checkoutsession['payment_intent'])) {
             $charge = util::stripe_api_request('payment_intent_retrieve', $checkoutsession['payment_intent']);
-            $email = $charge['charges']['data'][0]['receipt_email'] ?? ($checkoutsession['customer_details']['email'] ?? '');
+            $email = $charge['charges']['data'][0]['receipt_email']
+                ?? ($checkoutsession['customer_details']['email'] ?? '');
             $paymentstatus = $charge['status'];
             $txnid = $charge['id'];
         } else {
-            // Free checkout session (0 amount, no PaymentIntent).
+            // Free checkout.
             $charge = null;
             $email = $checkoutsession['customer_details']['email'] ?? '';
             $paymentstatus = $checkoutsession['payment_status'];
@@ -107,17 +110,19 @@ class process_enrolment extends external_api {
         $data->userid = (int)$userid;
         $data->timeupdated = time();
 
+        // If payment not completed.
         if ($checkoutsession['payment_status'] !== 'paid') {
-            util::message_stripepayment_error_to_admin("Payment status: " . $checkoutsession['payment_status'], $data);
+            util::message_stripepayment_error_to_admin(
+                "Payment status: " . $checkoutsession['payment_status'],
+                $data
+            );
             redirect($CFG->wwwroot);
         }
         $PAGE->set_context($context);
         try {
-            // Send the file, this line will be reached if no error was thrown above.
             $failuremessage = $charge ? ($charge['last_payment_error']['message'] ?? 'NA') : 'NA';
             $failurecode = $charge ? ($charge['last_payment_error']['code'] ?? 'NA') : 'NA';
-            $data->couponid = $couponid;
-            $data->receiveremail = $user->email; // Use user email from database instead of Stripe response.
+            $data->receiveremail = $user->email;
             $data->receiverid = $checkoutsession['customer'];
             $data->txnid = $txnid;
             $data->price = $charge ? $charge['amount'] / 100 : 0;
@@ -128,14 +133,13 @@ class process_enrolment extends external_api {
             $data->itemname = $course->fullname;
             $data->paymenttype = $charge ? 'stripe' : 'free';
 
-            // Use consolidated enrollment and notification function.
+            // Enroll & notify.
             self::enroll_user_and_send_notifications($plugininstance, $course, $context, $user, $data);
             $destination = $CFG->wwwroot . "/course/view.php?id=" . $course->id;
             $fullname = format_string($course->fullname, true, ['context' => $context]);
             if (is_enrolled($context, $user, '', true)) {
                 redirect($destination, get_string('paymentthanks', '', $fullname));
             } else {
-                // Somehow they aren't enrolled yet!.
                 $PAGE->set_url($destination);
                 echo $OUTPUT->header();
                 $orderdetails = new stdClass();
