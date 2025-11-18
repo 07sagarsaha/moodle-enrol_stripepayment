@@ -32,6 +32,7 @@ use core\exception\moodle_exception;
 use core\lang_string;
 use core_user;
 use Exception;
+use moodle_url;
 use stdClass;
 
 /**
@@ -52,6 +53,40 @@ class util {
         return enrol_get_plugin('stripepayment');
     }
 
+    /**
+     * Create a link to a URL with optional text
+     *
+     * @param string $url The URL to link to
+     * @param string|null $text The text to display (optional)
+     * @return string The HTML link
+     */
+    public static function link(string $url, ?string $text = null) {
+        // If no text is provided, default to "from here" string.
+        if ($text === null) {
+            $text = get_string('fromhere', 'enrol_stripepayment');
+        }
+    
+        return '<a href="' . $url . '" target="_blank">' . $text . '</a>';
+    }
+
+    public static function get_webservice_setup_message($for){
+    
+        // Predefined URLs.
+        $webservicesoverview = new moodle_url('/admin/search.php', ['query' => 'enablewebservices']);
+        $restweblink = new moodle_url('/admin/settings.php', ['section' => 'webserviceprotocols']);
+        $createtoken = new moodle_url('/admin/webservice/tokens.php');
+    
+        return
+            get_string('enablewebservicesfirst', 'enrol_stripepayment') . ' ' .
+            util::link($webservicesoverview) . ' . ' .
+    
+            get_string('createusertoken', 'enrol_stripepayment') . ' ' .
+            util::link($createtoken) . ' . ' .
+    
+            get_string('enabledrestprotocol', 'enrol_stripepaymentpro', $for) . ' ' .
+            util::link($restweblink);
+    }
+    
     /**
      * Lists all currencies available for plugin.
      * @return $currencies

@@ -189,21 +189,11 @@ if ($ADMIN->fulltree) {
         $options
     ));
 
-    // Webservice token.
-    $webservicesoverview = $CFG->wwwroot . '/admin/search.php?query=enablewebservices';
-    $restweblink = $CFG->wwwroot . '/admin/settings.php?section=webserviceprotocols';
-    $createtoken = $CFG->wwwroot . '/admin/webservice/tokens.php';
     $settings->add(new admin_setting_configtext(
         'enrol_stripepayment/webservice_token',
         get_string('webservicetokenstring', 'enrol_stripepayment'),
-        get_string('enablewebservicesfirst', 'enrol_stripepayment') . '<a href="' . $webservicesoverview . '" target="_blank"> '
-        . get_string('fromhere', 'enrol_stripepayment') . '</a> . '
-        . get_string('createusertoken', 'enrol_stripepayment') . '<a href="' . $restweblink . '" target="_blank"> '
-        . get_string('fromhere', 'enrol_stripepayment') . '</a> . '
-        . get_string('enabledrestprotocol', 'enrol_stripepayment') . '<a href="' . $createtoken . '" target="_blank"> '
-        . get_string('fromhere', 'enrol_stripepayment') . '</a>
-        ',
-        ''
+        util::get_webservice_setup_message('moodle_enrol_stripepayment'),
+            ''
     ));
     // Enrol instance defaults.
     $settings->add(new admin_setting_heading(
