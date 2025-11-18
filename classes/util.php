@@ -65,28 +65,34 @@ class util {
         if ($text === null) {
             $text = get_string('fromhere', 'enrol_stripepayment');
         }
-    
+
         return '<a href="' . $url . '" target="_blank">' . $text . '</a>';
     }
 
-    public static function get_webservice_setup_message($for){
-    
+    /**
+     * Get the message to display when web services are not set up.
+     *
+     * @param string $for The entity for which the message is being displayed
+     * @return string The message
+     */
+    public static function get_webservice_setup_message($for) {
+
         // Predefined URLs.
         $webservicesoverview = new moodle_url('/admin/search.php', ['query' => 'enablewebservices']);
         $restweblink = new moodle_url('/admin/settings.php', ['section' => 'webserviceprotocols']);
         $createtoken = new moodle_url('/admin/webservice/tokens.php');
-    
+
         return
             get_string('enablewebservicesfirst', 'enrol_stripepayment') . ' ' .
-            util::link($webservicesoverview) . ' . ' .
-    
+            self::link($webservicesoverview) . ' . ' .
+
             get_string('createusertoken', 'enrol_stripepayment') . ' ' .
-            util::link($createtoken) . ' . ' .
-    
+            self::link($createtoken) . ' . ' .
+
             get_string('enabledrestprotocol', 'enrol_stripepaymentpro', $for) . ' ' .
-            util::link($restweblink);
+            self::link($restweblink);
     }
-    
+
     /**
      * Lists all currencies available for plugin.
      * @return $currencies
