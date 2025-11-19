@@ -39,14 +39,9 @@ use core_privacy\local\request\writer;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class provider implements
-        // Transactions store user data.
-        \core_privacy\local\metadata\provider,
-
-        // The stripepayment enrolment plugin contains user's transactions.
-        \core_privacy\local\request\plugin\provider,
-
-        // This plugin is capable of determining which users have data within it.
-        \core_privacy\local\request\core_userlist_provider {
+    \core_privacy\local\metadata\provider, 
+    \core_privacy\local\request\plugin\provider,
+    \core_privacy\local\request\core_userlist_provider {
     /**
      * Returns meta data about this system.
      *
@@ -80,7 +75,7 @@ class provider implements
                 'reasoncode'         => 'privacy:metadata:enrol_stripepayment:reasoncode',
                 'txnid'              => 'privacy:metadata:enrol_stripepayment:txnid',
                 'paymenttype'        => 'privacy:metadata:enrol_stripepayment:paymenttype',
-                'timeupdated'        => 'privacy:metadata:enrol_stripepayment:timeupdated'
+                'timeupdated'        => 'privacy:metadata:enrol_stripepayment:timeupdated',
             ],
             'privacy:metadata:enrol_stripepayment'
         );
@@ -178,8 +173,8 @@ class provider implements
                 if (!empty($transactions)) {
                     $coursecontext = \context_course::instance($lastcourseid);
                     writer::with_context($coursecontext)->export_data(
-                            [$strtransactions],
-                            (object) ['transactions' => $transactions]
+                        [$strtransactions],
+                        (object) ['transactions' => $transactions]
                     );
                 }
                 $transactions = [];
@@ -210,8 +205,8 @@ class provider implements
         if (!empty($transactions)) {
             $coursecontext = \context_course::instance($lastcourseid);
             writer::with_context($coursecontext)->export_data(
-                    [$strtransactions],
-                    (object) ['transactions' => $transactions]
+                [$strtransactions],
+                (object) ['transactions' => $transactions]
             );
         }
     }
@@ -228,7 +223,7 @@ class provider implements
             return;
         }
 
-        $DB->delete_records('enrol_stripepayment', array('courseid' => $context->instanceid));
+        $DB->delete_records('enrol_stripepayment', ['courseid' => $context->instanceid]);
     }
 
     /**

@@ -86,7 +86,12 @@ class process_enrolment extends external_api {
             util::validate_data($userid, $instanceid);
 
         $enrolmentdata = self::prepare_enrollment_data(
-            $chargeinfo, $couponid, $plugininstance, $course, $user, $checkoutsession
+            $chargeinfo,
+            $couponid,
+            $plugininstance,
+            $course,
+            $user,
+            $checkoutsession
         );
 
         self::validate_payment_status($checkoutsession, $enrolmentdata);
@@ -101,13 +106,16 @@ class process_enrolment extends external_api {
             util::send_enrollment_notifications($course, $context, $user, util::get_core());
 
             self::redirect_user_to_course($course, $context, $user);
-
         } catch (Exception $e) {
             util::message_stripepayment_error_to_admin($e->getMessage(), ['sessionid' => $sessionid]);
             throw new Exception($e->getMessage());
         }
     }
 
+    /**
+     * Extract charge info
+     * @param array $checkoutsession
+     */
     private static function extract_charge_info($checkoutsession) {
         // If 100% discount → no payment_intent.
         if (empty($checkoutsession['payment_intent'])) {
@@ -115,7 +123,7 @@ class process_enrolment extends external_api {
                 'charge'        => null,
                 'email'         => $checkoutsession['customer_details']['email'] ?? '',
                 'paymentstatus' => $checkoutsession['payment_status'],
-                'txnid'         => $checkoutsession['id']
+                'txnid'         => $checkoutsession['id'],
             ];
         }
 
@@ -129,12 +137,26 @@ class process_enrolment extends external_api {
             'email'         => $charge['charges']['data'][0]['receipt_email']
                                 ?? ($checkoutsession['customer_details']['email'] ?? ''),
             'paymentstatus' => $charge['status'],
-            'txnid'         => $charge['id']
+            'txnid'         => $charge['id'],
         ];
     }
 
+    /**
+     * Prepare enrollment data
+     * @param object $chargeinfo
+     * @param number $couponid
+     * @param object $plugininstance
+     * @param object $course
+     * @param object $user
+     * @param array $checkoutsession
+     */
     private static function prepare_enrollment_data(
-        $chargeinfo, $couponid, $plugininstance, $course, $user, $checkoutsession
+        $chargeinfo,
+        $couponid,
+        $plugininstance,
+        $course,
+        $user,
+        $checkoutsession
     ) {
         $data = new stdClass();
 
@@ -158,6 +180,11 @@ class process_enrolment extends external_api {
         return $data;
     }
 
+    /**
+     * Validate payment status
+     * @param array $checkoutsession
+     * @param object $data
+     */
     private static function validate_payment_status($checkoutsession, $data) {
         global $CFG;
 
@@ -173,6 +200,11 @@ class process_enrolment extends external_api {
         redirect($CFG->wwwroot);
     }
 
+    /**
+     * Enrol user to course
+     * @param object $plugininstance
+     * @param object $user
+     */
     private static function enrol_user_to_course($plugininstance, $user) {
         $timestart = time();
         $timeend   = $plugininstance->enrolperiod
@@ -188,6 +220,12 @@ class process_enrolment extends external_api {
         );
     }
 
+    /**
+     * Redirect user to course page
+     * @param object $course
+     * @param object $context
+     * @param object $user
+     */
     private static function redirect_user_to_course($course, $context, $user) {
         global $CFG, $PAGE, $OUTPUT;
 
@@ -202,7 +240,7 @@ class process_enrolment extends external_api {
         echo $OUTPUT->header();
         $orderdetails = (object)[
             'teacher'  => get_string('defaultcourseteacher'),
-            'fullname' => $fullname
+            'fullname' => $fullname,
         ];
         notice(get_string('paymentsorry', '', $orderdetails), $destination);
     }
