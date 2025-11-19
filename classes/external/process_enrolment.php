@@ -75,7 +75,7 @@ class process_enrolment extends external_api {
      */
     public static function execute($sessionid, $userid, $couponid, $instanceid) {
         global $PAGE, $DB;
-    
+
         $checkoutsession = util::stripe_api_request(
             'checkout_session_retrieve',
             $sessionid
@@ -90,9 +90,9 @@ class process_enrolment extends external_api {
         );
 
         self::validate_payment_status($checkoutsession, $enrolmentdata);
-    
+
         $PAGE->set_context($context);
-    
+
         try {
             $DB->insert_record("enrol_stripepayment", $enrolmentdata);
 
@@ -101,7 +101,7 @@ class process_enrolment extends external_api {
             util::send_enrollment_notifications($course, $context, $user, util::get_core());
 
             self::redirect_user_to_course($course, $context, $user);
-    
+
         } catch (Exception $e) {
             util::message_stripepayment_error_to_admin($e->getMessage(), ['sessionid' => $sessionid]);
             throw new Exception($e->getMessage());
@@ -118,12 +118,12 @@ class process_enrolment extends external_api {
                 'txnid'         => $checkoutsession['id']
             ];
         }
-    
+
         $charge = util::stripe_api_request(
             'payment_intent_retrieve',
             $checkoutsession['payment_intent']
         );
-    
+
         return (object)[
             'charge'        => $charge,
             'email'         => $charge['charges']['data'][0]['receipt_email']
@@ -137,7 +137,7 @@ class process_enrolment extends external_api {
         $chargeinfo, $couponid, $plugininstance, $course, $user, $checkoutsession
     ) {
         $data = new stdClass();
-    
+
         $data->couponid       = $couponid;
         $data->stripeemail    = $chargeinfo->email;
         $data->courseid       = $plugininstance->courseid;
@@ -154,22 +154,22 @@ class process_enrolment extends external_api {
         $data->reasoncode     = $chargeinfo->charge['last_payment_error']['code'] ?? 'NA';
         $data->itemname       = $course->fullname;
         $data->paymenttype    = $chargeinfo->charge ? 'stripe' : 'free';
-    
+
         return $data;
     }
-    
+
     private static function validate_payment_status($checkoutsession, $data) {
         global $CFG;
-    
+
         if ($checkoutsession['payment_status'] === 'paid') {
             return;
         }
-    
+
         util::message_stripepayment_error_to_admin(
             "Payment status: " . $checkoutsession['payment_status'],
             $data
         );
-    
+
         redirect($CFG->wwwroot);
     }
 
@@ -178,7 +178,7 @@ class process_enrolment extends external_api {
         $timeend   = $plugininstance->enrolperiod
             ? $timestart + $plugininstance->enrolperiod
             : 0;
-    
+
         util::get_core()->enrol_user(
             $plugininstance,
             $user->id,
@@ -190,14 +190,14 @@ class process_enrolment extends external_api {
 
     private static function redirect_user_to_course($course, $context, $user) {
         global $CFG, $PAGE, $OUTPUT;
-    
+
         $destination = $CFG->wwwroot . "/course/view.php?id=" . $course->id;
         $fullname = format_string($course->fullname, true, ['context' => $context]);
-    
+
         if (is_enrolled($context, $user, '', true)) {
             redirect($destination, get_string('paymentthanks', '', $fullname));
         }
-    
+
         $PAGE->set_url($destination);
         echo $OUTPUT->header();
         $orderdetails = (object)[
