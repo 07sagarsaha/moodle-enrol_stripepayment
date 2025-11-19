@@ -24,7 +24,6 @@
  */
 
  namespace enrol_stripepayment\external;
- use core\exception\moodle_exception;
 use core_external\external_api;
  use core_external\external_function_parameters;
  use core_external\external_value;
@@ -75,114 +74,136 @@ class process_enrolment extends external_api {
      * @param number $instanceid
      */
     public static function execute($sessionid, $userid, $couponid, $instanceid) {
-        global $CFG, $PAGE, $OUTPUT;
-        $data = new stdClass();
+        global $PAGE, $DB;
+    
+        $checkoutsession = util::stripe_api_request(
+            'checkout_session_retrieve',
+            $sessionid
+        );
+        $chargeinfo       = self::extract_charge_info($checkoutsession);
 
-        // Retrieve checkout session.
-        $checkoutsession = util::stripe_api_request('checkout_session_retrieve', $sessionid);
+        [$plugininstance, $course, $context, $user] =
+            util::validate_data($userid, $instanceid);
 
-        // For 100% discount, no payment_intent is created.
-        if (!empty($checkoutsession['payment_intent'])) {
-            $charge = util::stripe_api_request('payment_intent_retrieve', $checkoutsession['payment_intent']);
-            $email = $charge['charges']['data'][0]['receipt_email']
-                ?? ($checkoutsession['customer_details']['email'] ?? '');
-            $paymentstatus = $charge['status'];
-            $txnid = $charge['id'];
-        } else {
-            // Free checkout.
-            $charge = null;
-            $email = $checkoutsession['customer_details']['email'] ?? '';
-            $paymentstatus = $checkoutsession['payment_status'];
-            $txnid = $checkoutsession['id'];
-        }
+        $enrolmentdata = self::prepare_enrollment_data(
+            $chargeinfo, $couponid, $plugininstance, $course, $user, $checkoutsession
+        );
 
-        $data->couponid = $couponid;
-        $data->stripeemail = $email;
-
-        // Validate users, course, context, plugininstance.
-        $validateddata = util::validate_data($userid, $instanceid);
-        $plugininstance = $validateddata[0];
-        $course = $validateddata[1];
-        $context = $validateddata[2];
-        $user = $validateddata[3];
-        $data->courseid = $plugininstance->courseid;
-        $data->instanceid = $instanceid;
-        $data->userid = (int)$userid;
-        $data->timeupdated = time();
-
-        // If payment not completed.
-        if ($checkoutsession['payment_status'] !== 'paid') {
-            util::message_stripepayment_error_to_admin(
-                "Payment status: " . $checkoutsession['payment_status'],
-                $data
-            );
-            redirect($CFG->wwwroot);
-        }
+        self::validate_payment_status($checkoutsession, $enrolmentdata);
+    
         $PAGE->set_context($context);
+    
         try {
-            $failuremessage = $charge ? ($charge['last_payment_error']['message'] ?? 'NA') : 'NA';
-            $failurecode = $charge ? ($charge['last_payment_error']['code'] ?? 'NA') : 'NA';
-            $data->receiveremail = $user->email;
-            $data->receiverid = $checkoutsession['customer'];
-            $data->txnid = $txnid;
-            $data->price = $charge ? $charge['amount'] / 100 : 0;
-            $data->memo = $charge ? ($charge['payment_method'] ?? 'none') : 'none';
-            $data->paymentstatus = $paymentstatus;
-            $data->pendingreason = $failuremessage;
-            $data->reasoncode = $failurecode;
-            $data->itemname = $course->fullname;
-            $data->paymenttype = $charge ? 'stripe' : 'free';
+            $DB->insert_record("enrol_stripepayment", $enrolmentdata);
 
-            // Enroll & notify.
-            self::enroll_user_and_send_notifications($plugininstance, $course, $context, $user, $data);
-            $destination = $CFG->wwwroot . "/course/view.php?id=" . $course->id;
-            $fullname = format_string($course->fullname, true, ['context' => $context]);
-            if (is_enrolled($context, $user, '', true)) {
-                redirect($destination, get_string('paymentthanks', '', $fullname));
-            } else {
-                $PAGE->set_url($destination);
-                echo $OUTPUT->header();
-                $orderdetails = new stdClass();
-                $orderdetails->teacher = get_string('defaultcourseteacher');
-                $orderdetails->fullname = $fullname;
-                notice(get_string('paymentsorry', '', $orderdetails), $destination);
-            }
+            self::enrol_user_to_course($plugininstance, $user);
+
+            util::send_enrollment_notifications($course, $context, $user, util::get_core());
+
+            self::redirect_user_to_course($course, $context, $user);
+    
         } catch (Exception $e) {
             util::message_stripepayment_error_to_admin($e->getMessage(), ['sessionid' => $sessionid]);
             throw new Exception($e->getMessage());
         }
     }
 
-    /**
-     * Enrollment and notification function
-     * @param stdClass $plugininstance The enrollment instance
-     * @param stdClass $course The course object
-     * @param stdClass $context The course context
-     * @param stdClass $user The user to enroll
-     * @param stdClass $enrollmentdata The enrollment data to insert into enrol_stripepayment table
-     * @return bool Success status
-     */
-    private static function enroll_user_and_send_notifications($plugininstance, $course, $context, $user, $enrollmentdata) {
-        global $DB;
-
-        // Insert enrollment record.
-        $DB->insert_record("enrol_stripepayment", $enrollmentdata);
-
-        // Calculate enrollment period.
-        if ($plugininstance->enrolperiod) {
-            $timestart = time();
-            $timeend = $timestart + $plugininstance->enrolperiod;
-        } else {
-            $timestart = time();
-            $timeend = 0;
+    private static function extract_charge_info($checkoutsession) {
+        // If 100% discount → no payment_intent.
+        if (empty($checkoutsession['payment_intent'])) {
+            return (object)[
+                'charge'        => null,
+                'email'         => $checkoutsession['customer_details']['email'] ?? '',
+                'paymentstatus' => $checkoutsession['payment_status'],
+                'txnid'         => $checkoutsession['id']
+            ];
         }
+    
+        $charge = util::stripe_api_request(
+            'payment_intent_retrieve',
+            $checkoutsession['payment_intent']
+        );
+    
+        return (object)[
+            'charge'        => $charge,
+            'email'         => $charge['charges']['data'][0]['receipt_email']
+                                ?? ($checkoutsession['customer_details']['email'] ?? ''),
+            'paymentstatus' => $charge['status'],
+            'txnid'         => $charge['id']
+        ];
+    }
 
-        // Enroll user.
-        util::get_core()->enrol_user($plugininstance, $user->id, $plugininstance->roleid, $timestart, $timeend);
+    private static function prepare_enrollment_data(
+        $chargeinfo, $couponid, $plugininstance, $course, $user, $checkoutsession
+    ) {
+        $data = new stdClass();
+    
+        $data->couponid       = $couponid;
+        $data->stripeemail    = $chargeinfo->email;
+        $data->courseid       = $plugininstance->courseid;
+        $data->instanceid     = $plugininstance->id;
+        $data->userid         = $user->id;
+        $data->timeupdated    = time();
+        $data->receiveremail  = $user->email;
+        $data->receiverid     = $checkoutsession['customer'];
+        $data->txnid          = $chargeinfo->txnid;
+        $data->price          = $chargeinfo->charge ? ($chargeinfo->charge['amount'] / 100) : 0;
+        $data->memo           = $chargeinfo->charge['payment_method'] ?? 'none';
+        $data->paymentstatus  = $chargeinfo->paymentstatus;
+        $data->pendingreason  = $chargeinfo->charge['last_payment_error']['message'] ?? 'NA';
+        $data->reasoncode     = $chargeinfo->charge['last_payment_error']['code'] ?? 'NA';
+        $data->itemname       = $course->fullname;
+        $data->paymenttype    = $chargeinfo->charge ? 'stripe' : 'free';
+    
+        return $data;
+    }
+    
+    private static function validate_payment_status($checkoutsession, $data) {
+        global $CFG;
+    
+        if ($checkoutsession['payment_status'] === 'paid') {
+            return;
+        }
+    
+        util::message_stripepayment_error_to_admin(
+            "Payment status: " . $checkoutsession['payment_status'],
+            $data
+        );
+    
+        redirect($CFG->wwwroot);
+    }
 
-        // Send notifications (same logic for both free and paid enrollment).
-        util::send_enrollment_notifications($course, $context, $user, util::get_core());
+    private static function enrol_user_to_course($plugininstance, $user) {
+        $timestart = time();
+        $timeend   = $plugininstance->enrolperiod
+            ? $timestart + $plugininstance->enrolperiod
+            : 0;
+    
+        util::get_core()->enrol_user(
+            $plugininstance,
+            $user->id,
+            $plugininstance->roleid,
+            $timestart,
+            $timeend
+        );
+    }
 
-        return true;
+    private static function redirect_user_to_course($course, $context, $user) {
+        global $CFG, $PAGE, $OUTPUT;
+    
+        $destination = $CFG->wwwroot . "/course/view.php?id=" . $course->id;
+        $fullname = format_string($course->fullname, true, ['context' => $context]);
+    
+        if (is_enrolled($context, $user, '', true)) {
+            redirect($destination, get_string('paymentthanks', '', $fullname));
+        }
+    
+        $PAGE->set_url($destination);
+        echo $OUTPUT->header();
+        $orderdetails = (object)[
+            'teacher'  => get_string('defaultcourseteacher'),
+            'fullname' => $fullname
+        ];
+        notice(get_string('paymentsorry', '', $orderdetails), $destination);
     }
 }
