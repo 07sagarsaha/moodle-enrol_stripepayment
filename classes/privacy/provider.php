@@ -39,9 +39,14 @@ use core_privacy\local\request\writer;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class provider implements
-    \core_privacy\local\metadata\provider, 
-    \core_privacy\local\request\plugin\provider,
-    \core_privacy\local\request\core_userlist_provider {
+        // Transactions store user data.
+        \core_privacy\local\metadata\provider,
+
+        // The paypal enrolment plugin contains user's transactions.
+        \core_privacy\local\request\plugin\provider,
+
+        // This plugin is capable of determining which users have data within it.
+        \core_privacy\local\request\core_userlist_provider {
     /**
      * Returns meta data about this system.
      *
