@@ -60,7 +60,7 @@ class util {
      * @param string|null $text The text to display (optional)
      * @return string The HTML link
      */
-    public static function link(string $url, ?string $text = null) {
+    public static function generate_html_link(string $url, ?string $text = null) {
         // If no text is provided, default to "from here" string.
         if ($text === null) {
             $text = get_string('fromhere', 'enrol_stripepayment');
@@ -84,13 +84,13 @@ class util {
 
         return
             get_string('enablewebservicesfirst', 'enrol_stripepayment') . ' ' .
-            self::link($webservicesoverview) . ' . ' .
+            self::generate_html_link($webservicesoverview) . ' . ' .
 
             get_string('createusertoken', 'enrol_stripepayment') . ' ' .
-            self::link($createtoken) . ' . ' .
+            self::generate_html_link($createtoken) . ' . ' .
 
             get_string('enabledrestprotocol', 'enrol_stripepaymentpro', $for) . ' ' .
-            self::link($restweblink);
+            self::generate_html_link($restweblink);
     }
 
     /**

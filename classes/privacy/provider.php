@@ -18,6 +18,7 @@
  * Privacy Subsystem implementation for enrol_stripepayment.
  *
  * @package    enrol_stripepayment
+ * @author     DualCube <admin@dualcube.com>
  * @category   privacy
  * @copyright  2019 DualCube Team(https://dualcube.com)
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
