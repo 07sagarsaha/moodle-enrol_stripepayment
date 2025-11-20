@@ -24,13 +24,13 @@
  */
 
  namespace enrol_stripepayment\external;
-use core_external\external_api;
+ use core_external\external_api;
  use core_external\external_function_parameters;
  use core_external\external_value;
  use core_external\external_single_structure;
  use enrol_stripepayment\util;
  use Exception;
-use stdClass;
+ use stdClass;
 
  /**
   * External process payment for stripepayment
@@ -94,21 +94,20 @@ class process_enrolment extends external_api {
             $checkoutsession
         );
 
-        self::validate_payment_status($checkoutsession, $enrolmentdata);
+        if (self::validate_payment_status($checkoutsession, $enrolmentdata)) {
+            $PAGE->set_context($context);
+            try {
+                $DB->insert_record("enrol_stripepayment", $enrolmentdata);
 
-        $PAGE->set_context($context);
+                self::enrol_user_to_course($plugininstance, $user);
 
-        try {
-            $DB->insert_record("enrol_stripepayment", $enrolmentdata);
+                util::send_enrollment_notifications($course, $context, $user, util::get_core());
 
-            self::enrol_user_to_course($plugininstance, $user);
-
-            util::send_enrollment_notifications($course, $context, $user, util::get_core());
-
-            self::redirect_user_to_course($course, $context, $user);
-        } catch (Exception $e) {
-            util::message_stripepayment_error_to_admin($e->getMessage(), ['sessionid' => $sessionid]);
-            throw new Exception($e->getMessage());
+                self::redirect_user_to_course($course, $context, $user);
+            } catch (Exception $e) {
+                util::message_stripepayment_error_to_admin($e->getMessage(), ['sessionid' => $sessionid]);
+                throw new Exception($e->getMessage());
+            }
         }
     }
 
@@ -189,7 +188,7 @@ class process_enrolment extends external_api {
         global $CFG;
 
         if ($checkoutsession['payment_status'] === 'paid') {
-            return;
+            return true;
         }
 
         util::message_stripepayment_error_to_admin(
