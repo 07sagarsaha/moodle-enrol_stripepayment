@@ -138,9 +138,9 @@ class process_payment extends external_api {
             // Try to find customer by email in Stripe (only once).
             $customers = util::stripe_api_request('customer_list', '', [
                 'email' => $user->email,
-                'limit' => 1
+                'limit' => 1,
             ]);
-        
+
             if (!empty($customers['data'])) {
                 $receiverid = $customers['data'][0]['id'] ?? null;
             } else {
@@ -151,7 +151,7 @@ class process_payment extends external_api {
                 ]);
                 $receiverid = $newcustomer['id'] ?? null;
             }
-        
+
             // Upsert DB record.
             if ($customerrecord) {
                 $DB->set_field(

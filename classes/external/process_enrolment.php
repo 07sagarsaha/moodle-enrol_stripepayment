@@ -106,14 +106,14 @@ class process_enrolment extends external_api {
                 self::redirect_user_to_course($course, $context, $user);
             } catch (moodle_exception $e) {
                 util::message_stripepayment_error_to_admin($e->getMessage(), ['sessionid' => $sessionid]);
-                throw new moodle_exception('invalidtransaction','enrol_stripepayment', '',$e->getMessage());
+                throw new moodle_exception('invalidtransaction', 'enrol_stripepayment', '', $e->getMessage());
             }
         }
     }
 
     /**
      * Extract charge info
-     * 
+     *
      * @param array $checkoutsession
      * @return object
      */
