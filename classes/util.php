@@ -31,7 +31,6 @@ use context_system;
 use core\exception\moodle_exception;
 use core\lang_string;
 use core_user;
-use Exception;
 use moodle_url;
 use stdClass;
 
@@ -263,7 +262,7 @@ class util {
      * @param string|null $resourceid  Optional Stripe resource ID (used when endpoint requires ID)
      * @param array|null  $data        POST or query parameters sent to Stripe (depending on endpoint method)
      * @return array Stripe API response decoded as associative array.
-     * @throws Exception If a cURL error occurs, Stripe returns a non-2xx response, or JSON decoding fails.
+     * @throws moodle_exception If a cURL error occurs, Stripe returns a non-2xx response, or JSON decoding fails.
      */
     public static function stripe_api_request($operation, $resourceid = null, $data = null) {
         $endpointinfo = static::get_stripe_endpoint($operation, $resourceid);
@@ -377,7 +376,7 @@ class util {
      * @param string $operation API operation type
      * @param string|null $resourceid Resource ID for specific operations
      * @return array Response data
-     * @throws Exception
+     * @throws moodle_exception
      */
     public static function get_stripe_endpoint($operation, $resourceid = null) {
         // HTTP method must be the first element.
@@ -390,7 +389,7 @@ class util {
         $route = $routes[$operation];
 
         if ($route['needs_id'] && !$resourceid) {
-            throw new Exception($route['message']);
+            throw new moodle_exception('missingresourceid', 'enrol_stripepayment', '', $route['message']);
         }
 
         return [

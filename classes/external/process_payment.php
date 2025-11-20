@@ -24,12 +24,12 @@
  */
 
  namespace enrol_stripepayment\external;
+ use core\exception\moodle_exception;
  use core_external\external_api;
  use core_external\external_function_parameters;
  use core_external\external_value;
  use core_external\external_single_structure;
  use enrol_stripepayment\util;
- use Exception;
 
  /**
   * External enrol function for stripepayment
@@ -46,9 +46,9 @@ class process_payment extends external_api {
     public static function execute_parameters() {
         return new external_function_parameters(
             [
-                'userid' => new external_value(PARAM_RAW, 'Update data user id'),
+                'userid' => new external_value(PARAM_INT, 'Update data user id'),
                 'couponid' => new external_value(PARAM_RAW, 'Update coupon id'),
-                'instanceid' => new external_value(PARAM_RAW, 'Update instance id'),
+                'instanceid' => new external_value(PARAM_INT, 'Update instance id'),
             ]
         );
     }
@@ -108,7 +108,7 @@ class process_payment extends external_api {
         // Validate user, course, plugin instance.
         try {
             [$plugininstance, $course, $context, $user] = util::validate_data($userid, $instanceid);
-        } catch (Exception $e) {
+        } catch (moodle_exception $e) {
             return [
                 'status' => 0,
                 'error' => ['message' => get_string('validationfailed', 'enrol_stripepayment', $e->getMessage())],
@@ -124,37 +124,49 @@ class process_payment extends external_api {
 
         // Get existing Stripe customer record.
         $customerrecord = $DB->get_record('enrol_stripepayment', ['receiveremail' => $user->email], '*', IGNORE_MISSING);
-        $receiverid = $customerrecord ? $customerrecord->receiverid : null;
+        $receiverid = $customerrecord?->receiverid;
 
-        // Validate or create customer.
+        // Try DB → Stripe validation only if ID exists.
         if ($receiverid) {
-            // Throws exception automatically if invalid.
-            util::stripe_api_request('customer_retrieve', $receiverid);
+            try {
+                util::stripe_api_request('customer_retrieve', $receiverid);
+            } catch (\Exception $e) {
+                // Customer ID is invalid in Stripe → clear it.
+                $receiverid = null;
+            }
         } else {
-            $customers = util::stripe_api_request('customer_list', '', ['email' => $user->email]);
-
+            // Try to find customer by email in Stripe (only once).
+            $customers = util::stripe_api_request('customer_list', '', [
+                'email' => $user->email,
+                'limit' => 1
+            ]);
+        
             if (!empty($customers['data'])) {
                 $receiverid = $customers['data'][0]['id'] ?? null;
             } else {
+                // Create new customer as last resort.
                 $newcustomer = util::stripe_api_request('customer_create', '', [
                     'email' => $user->email,
                     'name' => fullname($user),
                 ]);
                 $receiverid = $newcustomer['id'] ?? null;
             }
-
-            // Save customer in DB.
-            if ($receiverid) {
-                if ($customerrecord) {
-                    $DB->set_field('enrol_stripepayment', 'receiverid', $receiverid, ['receiveremail' => $user->email]);
-                } else {
-                    $DB->insert_record('enrol_stripepayment', [
-                        'receiveremail' => $user->email,
-                        'receiverid' => $receiverid,
-                        'userid' => $user->id,
-                        'timeupdated' => time(),
-                    ]);
-                }
+        
+            // Upsert DB record.
+            if ($customerrecord) {
+                $DB->set_field(
+                    'enrol_stripepayment',
+                    'receiverid',
+                    $receiverid,
+                    ['receiveremail' => $user->email]
+                );
+            } else {
+                $DB->insert_record('enrol_stripepayment', [
+                    'receiveremail' => $user->email,
+                    'receiverid' => $receiverid,
+                    'userid' => $user->id,
+                    'timeupdated' => time(),
+                ]);
             }
         }
 

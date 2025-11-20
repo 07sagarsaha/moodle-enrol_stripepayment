@@ -24,12 +24,12 @@
  */
 
  namespace enrol_stripepayment\external;
+ use core\exception\moodle_exception;
  use core_external\external_api;
  use core_external\external_function_parameters;
  use core_external\external_value;
  use core_external\external_single_structure;
  use enrol_stripepayment\util;
- use Exception;
  use stdClass;
 
  /**
@@ -47,10 +47,10 @@ class process_enrolment extends external_api {
     public static function execute_parameters() {
         return new external_function_parameters(
             [
-                'sessionid' => new external_value(PARAM_RAW, 'The item id to operate on'),
-                'userid' => new external_value(PARAM_RAW, 'Update data user id'),
+                'sessionid' => new external_value(PARAM_TEXT, 'The item id to operate on'),
+                'userid' => new external_value(PARAM_INT, 'Update data user id'),
                 'couponid'  => new external_value(PARAM_RAW, 'The item id to operate coupon id'),
-                'instanceid'  => new external_value(PARAM_RAW, 'The item id to operate instance id'),
+                'instanceid'  => new external_value(PARAM_INT, 'The item id to operate instance id'),
             ]
         );
     }
@@ -104,16 +104,18 @@ class process_enrolment extends external_api {
                 util::send_enrollment_notifications($course, $context, $user, util::get_core());
 
                 self::redirect_user_to_course($course, $context, $user);
-            } catch (Exception $e) {
+            } catch (moodle_exception $e) {
                 util::message_stripepayment_error_to_admin($e->getMessage(), ['sessionid' => $sessionid]);
-                throw new Exception($e->getMessage());
+                throw new moodle_exception('invalidtransaction','enrol_stripepayment', '',$e->getMessage());
             }
         }
     }
 
     /**
      * Extract charge info
+     * 
      * @param array $checkoutsession
+     * @return object
      */
     private static function extract_charge_info($checkoutsession) {
         // If 100% discount → no payment_intent.
@@ -148,6 +150,7 @@ class process_enrolment extends external_api {
      * @param object $course
      * @param object $user
      * @param array $checkoutsession
+     * @return object
      */
     private static function prepare_enrollment_data(
         $chargeinfo,
