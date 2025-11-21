@@ -55,11 +55,11 @@ class util {
     /**
      * Create a link to a URL with optional text
      *
-     * @param moodle_url $url The URL to link to
+     * @param moodle_url|string $url The URL to link to
      * @param string|null $text The text to display (optional)
      * @return string The HTML link
      */
-    public static function generate_link_html(string $url, ?string $text = null) {
+    public static function generate_link_html($url, ?string $text = null) {
         // If no text is provided, default to "from here" string.
         if ($text === null) {
             $text = get_string('fromhere', 'enrol_stripepayment');
@@ -539,7 +539,7 @@ class util {
      * @param stdClass $userfrom User sending the message
      * @param mixed $userto User(s) receiving the message
      * @param string $subject Message subject
-     * @param stdClass $orderdetails Order details
+     * @param string $contexturlname Order details
      * @param string $shortname Course shortname
      * @param string $fullmessage Full message text
      * @param string $fullmessagehtml Full message HTML

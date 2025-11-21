@@ -536,15 +536,15 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         $validstatus = array_keys(util::get_status_options());
         $validcurrency = array_keys(util::get_currencies());
         $validroles = array_keys($this->get_roleid_options($instance, $context));
-        $tovalidate = array(
+        $tovalidate = [
             'name' => PARAM_TEXT,
             'status' => $validstatus,
             'currency' => $validcurrency,
             'roleid' => $validroles,
             'enrolperiod' => PARAM_INT,
             'enrolstartdate' => PARAM_INT,
-            'enrolenddate' => PARAM_INT
-        );
+            'enrolenddate' => PARAM_INT,
+        ];
 
         $typeerrors = $this->validate_param_types($data, $tovalidate);
 
@@ -593,12 +593,12 @@ class enrol_stripepayment_plugin extends enrol_plugin {
     }
 
      /**
-     * Return an array of valid options for the roleid.
-     *
-     * @param stdClass $instance
-     * @param context $context
-     * @return array
-     */
+      * Return an array of valid options for the roleid.
+      *
+      * @param stdClass $instance
+      * @param context $context
+      * @return array
+      */
     protected function get_roleid_options($instance, $context) {
         if ($instance->id) {
             $roles = get_default_enrol_roles($context, $instance->roleid);

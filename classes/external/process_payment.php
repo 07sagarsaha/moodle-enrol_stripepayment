@@ -178,7 +178,7 @@ class process_payment extends external_api {
                 'couponid' => $couponid,
             ],
             'mode' => 'payment',
-            'success_url' => new moodle_url('/webservice/rest/server.php',['wstoken' => $usertoken])
+            'success_url' => new moodle_url('/webservice/rest/server.php', ['wstoken' => $usertoken])
                 . '&wsfunction=moodle_stripepayment_process_enrolment'
                 . '&moodlewsrestformat=json'
                 . '&sessionid={CHECKOUT_SESSION_ID}'
