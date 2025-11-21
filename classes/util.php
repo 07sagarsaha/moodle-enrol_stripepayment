@@ -125,7 +125,7 @@ class util {
     public static function get_status_options() {
         return [
             ENROL_INSTANCE_ENABLED => get_string('yes'),
-            ENROL_INSTANCE_DISABLED => get_string('no')
+            ENROL_INSTANCE_DISABLED => get_string('no'),
         ];
     }
 
