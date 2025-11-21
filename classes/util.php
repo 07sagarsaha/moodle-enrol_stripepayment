@@ -55,7 +55,7 @@ class util {
     /**
      * Create a link to a URL with optional text
      *
-     * @param string $url The URL to link to
+     * @param moodle_url $url The URL to link to
      * @param string|null $text The text to display (optional)
      * @return string The HTML link
      */
@@ -94,7 +94,7 @@ class util {
 
     /**
      * Lists all currencies available for plugin.
-     * @return $currencies
+     * @return array
      */
     public static function get_currencies() {
         // See https://www.stripe.com/cgi-bin/webscr?cmd=p/sell/mc/mc_intro-outside,
@@ -115,6 +115,18 @@ class util {
             $currencies[$c] = new lang_string($c, 'core_currencies');
         }
         return $currencies;
+    }
+
+    /**
+     * Return an array of valid options for the status.
+     *
+     * @return array
+     */
+    public static function get_status_options() {
+        return [
+            ENROL_INSTANCE_ENABLED => get_string('yes'),
+            ENROL_INSTANCE_DISABLED => get_string('no')
+        ];
     }
 
     /**
@@ -450,7 +462,7 @@ class util {
      * else send message to admin
      */
     public static function validate_data($userid, $instanceid) {
-        global $DB, $CFG;
+        global $DB;
 
         // Validate enrolment instance.
         if (!$plugininstance = $DB->get_record("enrol", ["id" => $instanceid, "status" => 0])) {
@@ -458,7 +470,7 @@ class util {
                 get_string('invalidinstance', 'enrol_stripepayment'),
                 ["id" => $plugininstance->courseid]
             );
-            redirect($CFG->wwwroot);
+            redirect(new moodle_url('/'));
         }
 
         // Validate course.
@@ -467,7 +479,7 @@ class util {
                 get_string('invalidcourseid', 'enrol_stripepayment'),
                 ["id" => $plugininstance->courseid]
             );
-            redirect($CFG->wwwroot);
+            redirect(new moodle_url('/'));
         }
 
         // Validate context.
@@ -476,7 +488,7 @@ class util {
                 get_string('invalidcontextid', 'enrol_stripepayment'),
                 ["id" => $course->id]
             );
-            redirect($CFG->wwwroot);
+            redirect(new moodle_url('/'));
         }
 
         // Validate user.
@@ -485,7 +497,7 @@ class util {
                 get_string('notvalidorderdetails', 'enrol_stripepayment'),
                 ["id" => $userid]
             );
-            redirect($CFG->wwwroot . '/course/view.php?id=' . $course->id);
+            redirect(new moodle_url('/course/view.php', ['id' => $course->id]));
         }
         return [$plugininstance, $course, $context, $user];
     }
@@ -508,27 +520,16 @@ class util {
         $messagesubject = get_string('stripeapierror', 'enrol_stripepayment', $subject);
         $fullmessage = $messagebody;
         $fullmessagehtml = '<p>' . nl2br(s($messagebody)) . '</p>';
-
-        // Send message using Message API.
-        $message = new \core\message\message();
-        $message->courseid = SITEID;
-        $message->component = 'enrol_stripepayment';
-        $message->name = 'stripepayment_enrolment';
-        $message->userfrom = core_user::get_noreply_user();
-        $message->userto = $admin;
-        $message->subject = $messagesubject;
-        $message->fullmessage = $fullmessage;
-        $message->fullmessageformat = FORMAT_PLAIN;
-        $message->fullmessagehtml = $fullmessagehtml;
-        $message->smallmessage = get_string('stripepaymenterroroccurred', 'enrol_stripepayment');
-        $message->notification = 1;
-        $message->contexturl = new \core\url('/admin/index.php');
-        $message->contexturlname = 'Site administration';
-
-        $messageid = message_send($message);
-        if (!$messageid) {
-            debugging('Failed to send stripepayment error notification to admin: ' . $admin->id, DEBUG_DEVELOPER);
-        }
+        self::send_message(
+            $site,
+            core_user::get_noreply_user(),
+            $admin,
+            $messagesubject,
+            'Site administration',
+            'enrol_stripepayment',
+            $fullmessage,
+            $fullmessagehtml
+        );
     }
 
     /**
@@ -549,7 +550,7 @@ class util {
         $userfrom,
         $userto,
         $subject,
-        $orderdetails,
+        $contexturlname,
         $shortname,
         $fullmessage,
         $fullmessagehtml
@@ -558,8 +559,8 @@ class util {
         foreach ($recipients as $recipient) {
             $message = new \core\message\message();
             $message->courseid = $course->id;
-            $message->component = 'enrol_stripepayment';
-            $message->name = 'stripepayment_enrolment';
+            $message->component = $shortname;
+            $message->name = $shortname;
             $message->userfrom = $userfrom;
             $message->userto = $recipient;
             $message->subject = $subject;
@@ -569,7 +570,7 @@ class util {
             $message->smallmessage = get_string('newenrolment', 'enrol_stripepayment', $shortname);
             $message->notification = 1;
             $message->contexturl = new \core\url('/course/view.php', ['id' => $course->id]);
-            $message->contexturlname = $orderdetails->coursename;
+            $message->contexturlname = $contexturlname;
 
             if (!message_send($message)) {
                 debugging("Failed to send stripepayment enrolment notification to user: {$recipient->id}", DEBUG_DEVELOPER);
@@ -585,8 +586,6 @@ class util {
      * @param object $plugin The enrollment plugin instance
      */
     public static function send_enrollment_notifications($course, $context, $user, $plugin) {
-        global $CFG;
-
         // Get teacher.
         if (
             $users = get_users_by_capability(
@@ -615,14 +614,8 @@ class util {
 
         // Common data.
         $shortname = format_string($course->shortname, true, ['context' => $context]);
-        $coursecontext = context_course::instance($course->id);
-        $sitename = $CFG->wwwroot;
+        $sitename = new moodle_url('/');
 
-        $orderdetails = (object)[
-            'coursename' => format_string($course->fullname, true, ['context' => $coursecontext]),
-            'course'     => format_string($course->fullname, true, ['context' => $coursecontext]),
-            'user'       => fullname($user),
-        ];
         $adminsubject = get_string(
             "enrolmentnew",
             'enrol_stripepayment',
@@ -677,7 +670,7 @@ class util {
                 $notify['from'],
                 $notify['recipient'],
                 $notify['subject'],
-                $orderdetails,
+                $course->fullname,
                 $shortname,
                 $fullmessage,
                 $fullmessagehtml

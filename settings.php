@@ -201,10 +201,7 @@ if ($ADMIN->fulltree) {
         get_string('enrolinstancedefaults', 'admin'),
         get_string('enrolinstancedefaults_desc', 'admin')
     ));
-    $options = [
-        ENROL_INSTANCE_ENABLED  => get_string('yes'),
-        ENROL_INSTANCE_DISABLED => get_string('no'),
-    ];
+    $options = util::get_status_options();
     $settings->add(new admin_setting_configselect(
         'enrol_stripepayment/status',
         get_string('status', 'enrol_stripepayment'),

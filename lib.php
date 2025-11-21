@@ -119,8 +119,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         if ($instance->enrol !== 'stripepayment') {
              throw new moodle_exception('invalidenroltype', 'enrol_stripepayment');
         }
-        $context = context_course::instance($instance->courseid);
-        if (has_capability('enrol/stripepayment:manage', $context)) {
+        if (has_capability('enrol/stripepayment:manage', context_course::instance($instance->courseid))) {
             $managelink = new moodle_url(
                 '/enrol/editinstance.php',
                 [
@@ -143,9 +142,8 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         if ($instance->enrol !== 'stripepayment') {
             throw new moodle_exception('invalidenrolinstance', 'enrol_stripepayment');
         }
-        $context = context_course::instance($instance->courseid);
         $icons = [];
-        if (has_capability('enrol/stripepayment:manage', $context)) {
+        if (has_capability('enrol/stripepayment:manage', context_course::instance($instance->courseid))) {
             $linkparams = [
                 'courseid' => $instance->courseid,
                 'id' => $instance->id,
@@ -180,10 +178,9 @@ class enrol_stripepayment_plugin extends enrol_plugin {
      * @return string html text, usually a form in a text box
      */
     public function enrol_page_hook(stdClass $instance) {
-        global $CFG, $USER, $OUTPUT, $DB, $PAGE;  // Added $PAGE to global declarations.
+        global $USER, $OUTPUT, $DB, $PAGE;  // Added $PAGE to global declarations.
 
-        $enrolstatus = util::can_stripepayment_enrol($instance);
-        if (!$enrolstatus) {
+        if (!util::can_stripepayment_enrol($instance)) {
             $notification = new notification(get_string('maxenrolledreached', 'enrol_stripepayment'), 'error', false);
             $notification->set_extra_classes(['mb-0']);
             $enrolpage = new enrol_page(
@@ -259,7 +256,6 @@ class enrol_stripepayment_plugin extends enrol_plugin {
             'cost' => format_float($cost, 2, true),
             'coursename' => format_string($course->fullname, true, ['context' => context_course::instance($course->id)]),
             'instanceid' => $instance->id,
-            'wwwroot' => $CFG->wwwroot,
             'enrolbtncolor' => $this->get_config('enrolbtncolor'),
             'enablecouponsection' => $this->get_config('enablecouponsection'),
         ];
@@ -448,9 +444,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         $mform->addElement('text', 'name', get_string('custominstancename', 'enrol'));
         $mform->setType('name', PARAM_TEXT);
 
-        $options = [ENROL_INSTANCE_ENABLED  => get_string('yes'),
-                         ENROL_INSTANCE_DISABLED => get_string('no'),
-        ];
+        $options = util::get_status_options();
         $mform->addElement('select', 'status', get_string('status', 'enrol_stripepayment'), $options);
         $mform->setDefault('status', $this->get_config('status'));
 
@@ -465,11 +459,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         $mform->addElement('select', 'currency', get_string('currency', 'enrol_stripepayment'), $currency);
         $mform->setDefault('currency', $this->get_config('currency'));
 
-        if ($instance->id) {
-            $roles = get_default_enrol_roles($context, $instance->roleid);
-        } else {
-            $roles = get_default_enrol_roles($context, $this->get_config('roleid'));
-        }
+        $roles = $this->get_roleid_options($instance, $context);
         // Assign role.
         $mform->addElement('select', 'roleid', get_string('assignrole', 'enrol_stripepayment'), $roles);
         $mform->setDefault('roleid', $this->get_config('roleid'));
@@ -525,7 +515,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
      * @param context $context The context of the instance we are editing
      * @return array of "element_name"=>"error_description" if there are errors,
      *         or an empty array if everything is OK.
-     * @return void
+     * @return array
      */
     public function edit_instance_validation($data, $files, $instance, $context) {
         $errors = [];
@@ -534,9 +524,29 @@ class enrol_stripepayment_plugin extends enrol_plugin {
             $errors['enrolenddate'] = get_string('enrolenddaterror', 'enrol_stripepayment');
         }
 
+        $cost = str_replace(get_string('decsep', 'langconfig'), '.', $data['cost']);
+        if (!is_numeric($cost)) {
+            $errors['cost'] = get_string('costerror', 'enrol_paypal');
+        }
+
         // Handle cost field - it might be in a group called 'costar'.
         $costvalue = null;
         $costfieldexists = false;
+
+        $validstatus = array_keys(util::get_status_options());
+        $validcurrency = array_keys(util::get_currencies());
+        $validroles = array_keys($this->get_roleid_options($instance, $context));
+        $tovalidate = array(
+            'name' => PARAM_TEXT,
+            'status' => $validstatus,
+            'currency' => $validcurrency,
+            'roleid' => $validroles,
+            'enrolperiod' => PARAM_INT,
+            'enrolstartdate' => PARAM_INT,
+            'enrolenddate' => PARAM_INT
+        );
+
+        $typeerrors = $this->validate_param_types($data, $tovalidate);
 
         if (isset($data['costar']['cost'])) {
             $costvalue = $data['costar']['cost'];
@@ -558,10 +568,6 @@ class enrol_stripepayment_plugin extends enrol_plugin {
                 $cost = 0.0;
             } else {
                 $cost = str_replace(get_string('decsep', 'langconfig'), '.', $costvalue);
-                if (!is_numeric($cost)) {
-                    $errors['costar'] = get_string('costerror', 'enrol_stripepayment');
-                    return $errors; // Return early if not numeric.
-                }
                 $cost = (float)$cost;
             }
 
@@ -582,7 +588,24 @@ class enrol_stripepayment_plugin extends enrol_plugin {
                 );
             }
         }
+        $errors = array_merge($errors, $typeerrors);
         return $errors;
+    }
+
+     /**
+     * Return an array of valid options for the roleid.
+     *
+     * @param stdClass $instance
+     * @param context $context
+     * @return array
+     */
+    protected function get_roleid_options($instance, $context) {
+        if ($instance->id) {
+            $roles = get_default_enrol_roles($context, $instance->roleid);
+        } else {
+            $roles = get_default_enrol_roles($context, $this->get_config('roleid'));
+        }
+        return $roles;
     }
 
     /**

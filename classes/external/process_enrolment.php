@@ -30,6 +30,7 @@
  use core_external\external_value;
  use core_external\external_single_structure;
  use enrol_stripepayment\util;
+ use moodle_url;
  use stdClass;
 
  /**
@@ -188,8 +189,6 @@ class process_enrolment extends external_api {
      * @param object $data
      */
     private static function validate_payment_status($checkoutsession, $data) {
-        global $CFG;
-
         if ($checkoutsession['payment_status'] === 'paid') {
             return true;
         }
@@ -199,7 +198,7 @@ class process_enrolment extends external_api {
             $data
         );
 
-        redirect($CFG->wwwroot);
+        redirect(new moodle_url('/'));
     }
 
     /**
@@ -229,9 +228,9 @@ class process_enrolment extends external_api {
      * @param object $user
      */
     private static function redirect_user_to_course($course, $context, $user) {
-        global $CFG, $PAGE, $OUTPUT;
+        global $PAGE, $OUTPUT;
 
-        $destination = $CFG->wwwroot . "/course/view.php?id=" . $course->id;
+        $destination = new moodle_url('/course/view.php', ['id' => $course->id]);
         $fullname = format_string($course->fullname, true, ['context' => $context]);
 
         if (is_enrolled($context, $user, '', true)) {

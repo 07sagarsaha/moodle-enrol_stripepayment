@@ -30,6 +30,7 @@
  use core_external\external_value;
  use core_external\external_single_structure;
  use enrol_stripepayment\util;
+ use moodle_url;
 
  /**
   * External enrol function for stripepayment
@@ -79,7 +80,7 @@ class process_payment extends external_api {
      * @return array
      */
     public static function execute($userid, $couponid, $instanceid) {
-        global $CFG, $DB;
+        global $DB;
 
         // Validate inputs.
         if (!is_numeric($userid) || $userid <= 0) {
@@ -119,7 +120,7 @@ class process_payment extends external_api {
         $description = format_string($course->fullname, true, ['context' => $context]);
 
         if (empty($amount) || empty($plugininstance->currency) || empty($plugininstance->courseid)) {
-            redirect($CFG->wwwroot . '/course/view.php?id=' . $plugininstance->courseid);
+            redirect(new moodle_url('/course/view.php', ['id' => $plugininstance->courseid]));
         }
 
         // Get existing Stripe customer record.
@@ -151,23 +152,6 @@ class process_payment extends external_api {
                 ]);
                 $receiverid = $newcustomer['id'] ?? null;
             }
-
-            // Upsert DB record.
-            if ($customerrecord) {
-                $DB->set_field(
-                    'enrol_stripepayment',
-                    'receiverid',
-                    $receiverid,
-                    ['receiveremail' => $user->email]
-                );
-            } else {
-                $DB->insert_record('enrol_stripepayment', [
-                    'receiveremail' => $user->email,
-                    'receiverid' => $receiverid,
-                    'userid' => $user->id,
-                    'timeupdated' => time(),
-                ]);
-            }
         }
 
         // Create Checkout Session.
@@ -194,14 +178,14 @@ class process_payment extends external_api {
                 'couponid' => $couponid,
             ],
             'mode' => 'payment',
-            'success_url' => $CFG->wwwroot . '/webservice/rest/server.php?wstoken=' . $usertoken
+            'success_url' => new moodle_url('/webservice/rest/server.php',['wstoken' => $usertoken])
                 . '&wsfunction=moodle_stripepayment_process_enrolment'
                 . '&moodlewsrestformat=json'
                 . '&sessionid={CHECKOUT_SESSION_ID}'
                 . '&userid=' . $userid
                 . '&couponid=' . $couponid
                 . '&instanceid=' . $instanceid,
-            'cancel_url' => $CFG->wwwroot . '/course/view.php?id=' . $plugininstance->courseid,
+            'cancel_url' => new moodle_url('/course/view.php', ['id' => $plugininstance->courseid]),
         ];
 
         $session = util::stripe_api_request('checkout_session_create', '', $sessionparams);
