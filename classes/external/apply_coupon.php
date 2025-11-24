@@ -61,7 +61,7 @@ class apply_coupon extends external_api {
             [
                 'status' => new external_value(PARAM_RAW, 'status: true if success'),
                 'couponname' => new external_value(PARAM_RAW, 'coupon name', VALUE_OPTIONAL),
-                'discountdisplay' => new external_value(PARAM_RAW, 'discount value', VALUE_OPTIONAL),
+                'discountdisplay' => new external_value(PARAM_RAW, 'discount display', VALUE_OPTIONAL),
                 'currency' => new external_value(PARAM_RAW, 'currency code', VALUE_OPTIONAL),
                 'discountamount' => new external_value(PARAM_RAW, 'discount amount', VALUE_OPTIONAL),
                 'uistate' => new external_value(PARAM_RAW, 'UI state: paid|error', VALUE_OPTIONAL),
