@@ -106,6 +106,7 @@ $string['messageprovider:stripepayment_enrolment'] = 'Stripe payment enrolment n
 $string['missingresourceid'] = 'Missing resource id';
 $string['newenrolment'] = 'New Student Enrollment in {$a}';
 $string['notvalidorderdetails'] = 'Not orderdetails valid user id';
+$string['off'] = 'off';
 $string['paymenterror'] = 'Payment session creation failed.';
 $string['paymentmethodnotfound'] = 'Payment method not found. This enrolment instance was created with different API keys. Please contact the administrator for assistance.';
 $string['pleasewait'] = 'Please wait...';

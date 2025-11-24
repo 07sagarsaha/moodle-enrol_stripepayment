@@ -164,7 +164,6 @@ class process_enrolment extends external_api {
         $data = new stdClass();
 
         $data->couponid       = $couponid;
-        $data->stripeemail    = $chargeinfo->email;
         $data->courseid       = $plugininstance->courseid;
         $data->instanceid     = $plugininstance->id;
         $data->userid         = $user->id;

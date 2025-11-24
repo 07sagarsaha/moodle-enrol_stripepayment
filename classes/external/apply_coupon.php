@@ -61,8 +61,7 @@ class apply_coupon extends external_api {
             [
                 'status' => new external_value(PARAM_RAW, 'status: true if success'),
                 'couponname' => new external_value(PARAM_RAW, 'coupon name', VALUE_OPTIONAL),
-                'coupontype' => new external_value(PARAM_RAW, 'coupon type: percent_off or amount_off', VALUE_OPTIONAL),
-                'discountvalue' => new external_value(PARAM_RAW, 'discount value', VALUE_OPTIONAL),
+                'discountdisplay' => new external_value(PARAM_RAW, 'discount value', VALUE_OPTIONAL),
                 'currency' => new external_value(PARAM_RAW, 'currency code', VALUE_OPTIONAL),
                 'discountamount' => new external_value(PARAM_RAW, 'discount amount', VALUE_OPTIONAL),
                 'uistate' => new external_value(PARAM_RAW, 'UI state: paid|error', VALUE_OPTIONAL),
@@ -112,8 +111,6 @@ class apply_coupon extends external_api {
         $cost = format_float($cost, 2, false);
 
         $couponname = '';
-        $coupontype = '';
-        $discountvalue = 0;
         $discountamount = 0;
 
         $coupon = util::stripe_api_request('coupon_retrieve', $couponid);
@@ -138,20 +135,18 @@ class apply_coupon extends external_api {
 
         $couponname = $coupon['name'] ?? $couponid;
 
+        // Ensure currency matches.
+        if (isset($coupon['currency']) && strtoupper($coupon['currency']) !== strtoupper($currency)) {
+            throw new moodle_exception('couponcurrencymismatch', 'enrol_stripepayment');
+        }
         if (isset($coupon['percent_off'])) {
             $discountamount = $cost * ($coupon['percent_off'] / 100);
             $cost -= $discountamount;
-            $coupontype = 'percent_off';
-            $discountvalue = $coupon['percent_off'];
+            $discountdisplay = $coupon['percent_off'] . '%' . get_string('off', 'enrol_stripepayment');
         } else if (isset($coupon['amount_off'])) {
-            // Ensure currency matches.
-            if (isset($coupon['currency']) && strtoupper($coupon['currency']) !== strtoupper($currency)) {
-                throw new moodle_exception('couponcurrencymismatch', 'enrol_stripepayment');
-            }
             $discountamount = $coupon['amount_off'] / 100;
             $cost -= $discountamount;
-            $coupontype = 'amount_off';
-            $discountvalue = $coupon['amount_off'] / 100;
+            $discountdisplay = $currency . ' ' . $coupon['amount_off'] / 100 . ' ' . get_string('off', 'enrol_stripepayment');
         } else {
             throw new moodle_exception('invalidcoupontype', 'enrol_stripepayment');
         }
@@ -186,8 +181,7 @@ class apply_coupon extends external_api {
         return [
             'status' => $cost,
             'couponname' => $couponname,
-            'coupontype' => $coupontype,
-            'discountvalue' => $discountvalue,
+            'discountdisplay' => $discountdisplay,
             'currency' => $currency,
             'discountamount' => $discountamount,
             'uistate' => $uistate['state'],

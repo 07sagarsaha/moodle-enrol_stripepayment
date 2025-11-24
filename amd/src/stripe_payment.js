@@ -115,11 +115,8 @@ function stripePayment(userid, couponid, instanceid, pleasewaitstring, entercoup
                 if (data.discountamount && data.currency) {
                     DOM.setElement("discountamountdisplay", `-${data.currency} ${data.discountamount}`);
                 }
-                if (data.discountamount && data.discountvalue) {
-                    const note = data.coupontype === "percentoff"
-                        ? `${data.discountvalue}% off`
-                        : `${data.currency} ${data.discountvalue} off`;
-                    DOM.setElement("discountnote", note);
+                if (data.discountamount && data.discountdisplay) {
+                    DOM.setElement("discountnote", data.discountdisplay);
                 }
             }
             if (data.status && data.currency) {
