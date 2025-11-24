@@ -194,7 +194,7 @@ class process_enrolment extends external_api {
 
         util::message_stripepayment_error_to_admin(
             "Payment status: " . $checkoutsession['payment_status'],
-            $data
+            $data,
         );
 
         redirect(new moodle_url('/'));

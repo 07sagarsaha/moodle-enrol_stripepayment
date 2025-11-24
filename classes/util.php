@@ -135,7 +135,7 @@ class util {
      * @param stdClass $instance enrol instance
      * @return bool html text, usually a form in a text box
      */
-    public static function can_stripepayment_enrol(stdClass $instance) {
+    public static function can_more_user_enrol(stdClass $instance) {
         global $DB;
         if ($instance->customint3 > 0) {
             // Max enrol limit specified.
@@ -191,15 +191,16 @@ class util {
         return $keys['secret'];
     }
 
-    /**
-     * Get the current publishable key based on mode.
-     *
-     * @return string The appropriate publishable key
-     */
-    public static function get_current_publishable_key() {
-        $keys = self::get_current_api_keys();
-        return $keys['publishable'];
-    }
+    // move to pro
+    // /**
+    //  * Get the current publishable key based on mode.
+    //  *
+    //  * @return string The appropriate publishable key
+    //  */
+    // public static function get_current_publishable_key() {
+    //     $keys = self::get_current_api_keys();
+    //     return $keys['publishable'];
+    // }  
 
     /**
      * Validate API keys for the current mode.
@@ -307,7 +308,6 @@ class util {
         $response = curl_exec($ch);
         $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlerror = curl_error($ch);
-        curl_close($ch);
 
         if ($curlerror) {
             throw new moodle_exception('crlerror', 'enrol_stripepayment', '', $curlerror);

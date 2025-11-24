@@ -180,7 +180,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
     public function enrol_page_hook(stdClass $instance) {
         global $USER, $OUTPUT, $DB, $PAGE;  // Added $PAGE to global declarations.
 
-        if (!util::can_stripepayment_enrol($instance)) {
+        if (!util::can_more_user_enrol($instance)) {
             $notification = new notification(get_string('maxenrolledreached', 'enrol_stripepayment'), 'error', false);
             $notification->set_extra_classes(['mb-0']);
             $enrolpage = new enrol_page(

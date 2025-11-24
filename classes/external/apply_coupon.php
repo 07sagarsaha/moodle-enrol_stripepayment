@@ -95,8 +95,8 @@ class apply_coupon extends external_api {
         if (!is_numeric($instanceid) || $instanceid <= 0) {
             throw new moodle_exception('invalidinstanceformat', 'enrol_stripepayment');
         }
-        $plugininstance = $DB->get_record("enrol", ["id" => $instanceid, "status" => 0]);
-        if (!$plugininstance) {
+        $enrolinstance = $DB->get_record("enrol", ["id" => $instanceid, "status" => 0]);
+        if (!$enrolinstance) {
             throw new moodle_exception('enrollmentinstancenotfound', 'enrol_stripepayment');
         }
 
@@ -128,8 +128,8 @@ class apply_coupon extends external_api {
         $couponname = $coupon['name'] ?? $couponid;
         $discountamount = 0;
         $defaultcost = (float)util::get_core()->get_config('cost');
-        $cost = (float)$plugininstance->cost > 0 ? (float)$plugininstance->cost : $defaultcost;
-        $currency = $plugininstance->currency ?: 'USD';
+        $cost = (float)$enrolinstance->cost > 0 ? (float)$enrolinstance->cost : $defaultcost;
+        $currency = $enrolinstance->currency ?: 'USD';
 
         // Ensure currency matches.
         if (isset($coupon['currency']) && strtoupper($coupon['currency']) !== strtoupper($currency)) {
@@ -182,7 +182,7 @@ class apply_coupon extends external_api {
             'discountamount' => $discountamount,
             'uistate' => $uistate['state'],
             'message' => $uistate['state'] === 'error' ? $uistate['errormessage'] : 'Coupon applied successfully.',
-            'showsections' => $uistate['showsections'],
+            'showsections' => $uistate['showsections']
         ];
     }
 }
