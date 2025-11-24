@@ -105,14 +105,6 @@ class apply_coupon extends external_api {
             throw new moodle_exception('stripeconfigurationincomplete', 'enrol_stripepayment');
         }
 
-        $defaultcost = (float)util::get_core()->get_config('cost');
-        $cost = (float)$plugininstance->cost > 0 ? (float)$plugininstance->cost : $defaultcost;
-        $currency = $plugininstance->currency ?: 'USD';
-        $cost = format_float($cost, 2, false);
-
-        $couponname = '';
-        $discountamount = 0;
-
         $coupon = util::stripe_api_request('coupon_retrieve', $couponid);
 
         // Enhanced coupon validation.
@@ -134,6 +126,10 @@ class apply_coupon extends external_api {
         }
 
         $couponname = $coupon['name'] ?? $couponid;
+        $discountamount = 0;
+        $defaultcost = (float)util::get_core()->get_config('cost');
+        $cost = (float)$plugininstance->cost > 0 ? (float)$plugininstance->cost : $defaultcost;
+        $currency = $plugininstance->currency ?: 'USD';
 
         // Ensure currency matches.
         if (isset($coupon['currency']) && strtoupper($coupon['currency']) !== strtoupper($currency)) {
