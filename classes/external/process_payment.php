@@ -73,79 +73,48 @@ class process_payment extends external_api {
     }
 
     /**
-     * Function for create Checkout Session and process payment
-     * @param int $userid
-     * @param string $couponid
-     * @param int $instanceid
+     * process payment using stripe checkout session
+     *
+     * @param int $userid User ID to enroll
+     * @param string $couponid Coupon code
+     * @param int $instanceid Instance ID
      * @return array
      */
     public static function execute($userid, $couponid, $instanceid) {
+        $sessionparams = self::get_session_params($userid, $couponid, $instanceid);
+        $session = util::stripe_api_request('checkout_session_create', '', $sessionparams);
+        return [
+            'status' => 'success',
+            'redirecturl' => $session['url'],
+            'error' => [],
+        ];
+    }
+
+    /**
+     * Get stripe customer id
+     *
+     * @param object $user User object
+     * @return string
+     */
+    public static function get_stripe_customer_id($user) {
         global $DB;
-
-        // Validate inputs.
-        if (!is_numeric($userid) || $userid <= 0) {
-            return [
-                'status' => 0,
-                'error' => ['message' => get_string('invaliduserid', 'enrol_stripepayment')],
-            ];
-        }
-        if (!is_numeric($instanceid) || $instanceid <= 0) {
-            return [
-                'status' => 0,
-                'error' => ['message' => get_string('invalidinstanceid', 'enrol_stripepayment')],
-            ];
-        }
-
-        $secretkey = util::get_current_secret_key();
-        $usertoken = util::get_core()->get_config('webservice_token');
-
-        if (empty($secretkey)) {
-            return [
-                'status' => 0,
-                'error' => ['message' => get_string('stripeconfigincomplete', 'enrol_stripepayment')],
-            ];
-        }
-
-        // Validate user, course, plugin instance.
-        try {
-            [$plugininstance, $course, $context, $user] = util::validate_data($userid, $instanceid);
-        } catch (moodle_exception $e) {
-            return [
-                'status' => 0,
-                'error' => ['message' => get_string('validationfailed', 'enrol_stripepayment', $e->getMessage())],
-            ];
-        }
-
-        $amount = util::get_stripe_amount($plugininstance->cost, $plugininstance->currency, false);
-        $description = format_string($course->fullname, true, ['context' => $context]);
-
-        if (empty($amount) || empty($plugininstance->currency) || empty($plugininstance->courseid)) {
-            redirect(new moodle_url('/course/view.php', ['id' => $plugininstance->courseid]));
-        }
-
-        // Get existing Stripe customer record.
         $customerrecord = $DB->get_record('enrol_stripepayment', ['receiveremail' => $user->email], '*', IGNORE_MISSING);
         $receiverid = $customerrecord?->receiverid;
 
-        // Try DB → Stripe validation only if ID exists.
         if ($receiverid) {
             try {
                 util::stripe_api_request('customer_retrieve', $receiverid);
             } catch (\Exception $e) {
-                // Customer ID is invalid in Stripe → clear it.
                 $receiverid = null;
             }
         } else {
-            // Try to find customer by email in Stripe (only once).
             $customers = util::stripe_api_request('customer_list', '', [
                 'email' => $user->email,
                 'limit' => 1,
             ]);
-
             if (!empty($customers['data'])) {
                 $receiverid = $customers['data'][0]['id'] ?? null;
             } else {
-                // Create new customer as last resort.
                 $newcustomer = util::stripe_api_request('customer_create', '', [
                     'email' => $user->email,
                     'name' => fullname($user),
@@ -154,7 +123,24 @@ class process_payment extends external_api {
             }
         }
 
-        // Create Checkout Session.
+        return $receiverid;
+    }
+
+    /**
+     * Get checkout session params
+     *
+     * @param int $userid User ID to enroll
+     * @param string $couponid Coupon code
+     * @param int $instanceid Instance ID
+     * @return array
+     */
+    private static function get_session_params($userid, $couponid, $instanceid) {
+        [$plugininstance, $course, $context, $user] = util::validate_data($userid, $instanceid);
+        $amount = util::get_stripe_amount($plugininstance->cost, $plugininstance->currency, false);
+        $description = format_string($course->fullname, true, ['context' => $context]);
+        $receiverid = self::get_stripe_customer_id($user);
+        $usertoken = util::get_core()->get_config('webservice_token');
+
         $sessionparams = [
             'customer' => $receiverid,
             'payment_intent_data' => ['description' => $description],
@@ -188,12 +174,6 @@ class process_payment extends external_api {
             'cancel_url' => new moodle_url('/course/view.php', ['id' => $plugininstance->courseid]),
         ];
 
-        $session = util::stripe_api_request('checkout_session_create', '', $sessionparams);
-
-        return [
-            'status' => 'success',
-            'redirecturl' => $session['url'],
-            'error' => [],
-        ];
+        return $sessionparams;
     }
 }

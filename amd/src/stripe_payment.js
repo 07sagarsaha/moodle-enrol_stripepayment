@@ -74,7 +74,7 @@ const createDOM = (instanceid) => {
     };
 };
 
-function stripePayment(userid, couponid, instanceid, pleasewaitstring, entercoupon, couponappling,paymenterror) {
+function stripePayment(userid, couponid, instanceid, pleasewaitstring, entercoupon, couponappling, couponapply) {
     const DOM = createDOM(instanceid);
     if (typeof window.Stripe === "undefined") {
         return;
@@ -96,38 +96,6 @@ function stripePayment(userid, couponid, instanceid, pleasewaitstring, entercoup
         DOM.toggleElement(containerid, false);
     };
 
-    const updateUIFromServerResponse = (data) => {
-        if (data.message) {
-            displayMessage("showmessage", data.message, data.uistate === "error" ? "error" : "success");
-        } else {
-            clearError("showmessage");
-        }
-
-        DOM.toggleElement("enrolbutton", data.uistate === "paid");
-        DOM.toggleElement("total", data.uistate === "paid");
-
-        if (data.uistate !== "error") {
-            DOM.toggleElement("discountsection", data.showsections.discountsection);
-            if (data.showsections.discountsection) {
-                if (data.couponname) {
-                    DOM.setElement("discounttag", data.couponname);
-                }
-                if (data.discountamount && data.currency) {
-                    DOM.setElement("discountamountdisplay", `-${data.currency} ${data.discountamount}`);
-                }
-                if (data.discountamount && data.discountdisplay) {
-                    DOM.setElement("discountnote", data.discountdisplay);
-                }
-            }
-            if (data.status && data.currency) {
-                const totalamount = DOM.getElement("totalamount");
-                if (totalamount) {
-                    totalamount.textContent = `${data.currency} ${parseFloat(data.status).toFixed(2)}`;
-                }
-            }
-        }
-    };
-
     const applyCouponHandler = async (event) => {
         event.preventDefault();
         const couponinput = DOM.getElement("coupon");
@@ -140,7 +108,7 @@ function stripePayment(userid, couponid, instanceid, pleasewaitstring, entercoup
         DOM.setButton("apply", true, couponappling);
         try {
             const data = await applyCoupon(couponcode, instanceid);
-            if (data?.status !== undefined) {
+            if (data?.cost !== undefined) {
                 couponid = couponcode;
                 DOM.toggleElement("coupon", false);
                 DOM.toggleElement("apply", false);
@@ -149,9 +117,34 @@ function stripePayment(userid, couponid, instanceid, pleasewaitstring, entercoup
                 throw new Error("Invalid server response");
             }
         } catch (error) {
-            displayMessage("showmessage", error.message || "Coupon validation failed", "error");
+            displayMessage("showmessage", error.message, "error");
             DOM.focusElement("coupon");
+        } finally {
+            DOM.setButton("apply", false, couponapply);
         }
+    };
+
+    const updateUIFromServerResponse = (data) => {
+        DOM.toggleElement("discountsection", data.showsections.discountsection);
+
+        if (data.showsections.discountsection) {
+            if (data.couponname) {
+                DOM.setElement("discounttag", data.couponname);
+            }
+            if (data.discountamount) {
+                DOM.setElement("discountamountdisplay", data.discountamount);
+            }
+            if (data.discountdisplay) {
+                DOM.setElement("discountnote", data.discountdisplay);
+            }
+            if (data.cost) {
+                DOM.setElement("totalamount", data.cost);
+            }
+            DOM.toggleElement("enrolbutton", data.showsections.paidenrollment);
+            DOM.toggleElement("total", data.showsections.paidenrollment);
+            displayMessage("showmessage", "", "success");
+        }
+        DOM.setButton("enrolbutton", false, "Enroll");
     };
 
     const EnrollHandler = async () => {

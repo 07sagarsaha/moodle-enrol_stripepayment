@@ -171,86 +171,68 @@ class enrol_stripepayment_plugin extends enrol_plugin {
     }
 
     /**
-     * Creates course enrol form, checks if form submitted
-     * and enrols user if necessary. It can also redirect.
-     *
+     * Returns link to page which may be used to add new instance of enrolment plugin in course.
      * @param stdClass $instance
-     * @return string html text, usually a form in a text box
+     * @return string
      */
     public function enrol_page_hook(stdClass $instance) {
         global $USER, $OUTPUT, $DB, $PAGE;  // Added $PAGE to global declarations.
 
         if (!util::can_more_user_enrol($instance)) {
-            $notification = new notification(get_string('maxenrolledreached', 'enrol_stripepayment'), 'error', false);
-            $notification->set_extra_classes(['mb-0']);
-            $enrolpage = new enrol_page(
-                instance: $instance,
-                header: $this->get_instance_name($instance),
-                body: $OUTPUT->render($notification)
-            );
-            return $OUTPUT->render($enrolpage);
+            return $this->info_notification(get_string('maxenrolledreached', 'enrol_stripepayment'), $instance);
         }
 
         if ($DB->record_exists('user_enrolments', ['userid' => $USER->id, 'enrolid' => $instance->id])) {
             return '';
         }
 
-        // Check enrollment date restrictions and show appropriate messages.
         if ($instance->enrolstartdate != 0 && $instance->enrolstartdate > time()) {
-            $notification = new notification(
-                get_string('canntenrolearly', 'enrol_stripepayment', userdate($instance->enrolstartdate)),
-                'info',
-                false
-            );
-            $notification->set_extra_classes(['mb-0']);
-            $enrolpage = new enrol_page(
-                instance: $instance,
-                header: $this->get_instance_name($instance),
-                body: $OUTPUT->render($notification)
-            );
-            return $OUTPUT->render($enrolpage);
+            return $this->info_notification(get_string('canntenrolearly', 'enrol_stripepayment', userdate($instance->enrolstartdate)), $instance);
         }
 
         if ($instance->enrolenddate != 0 && $instance->enrolenddate < time()) {
-            $notification = new notification(
-                get_string('canntenrollate', 'enrol_stripepayment', userdate($instance->enrolenddate)),
-                'error',
-                false
-            );
-            $notification->set_extra_classes(['mb-0']);
-            $enrolpage = new enrol_page(
-                instance: $instance,
-                header: $this->get_instance_name($instance),
-                body: $OUTPUT->render($notification)
-            );
-            return $OUTPUT->render($enrolpage);
+            return $this->info_notification(get_string('canntenrollate', 'enrol_stripepayment', userdate($instance->enrolenddate)), $instance);
         }
 
+        if (!$this->validate_instance_accessibility($instance)['accessible']) {
+            return $this->info_notification(get_string('paymentmethodnotfound', 'enrol_stripepayment'), $instance);
+        }
+
+        return $this->render_enrol_page($instance);
+
+    }
+
+    /**
+     * Returns notification message.
+     * @param string $message
+     * @param stdClass $instance
+     * @return string
+     */
+    public function info_notification($message, $instance) {
+        global $OUTPUT;
+        $notification = new notification($message, 'info', false);
+        $notification->set_extra_classes(['mb-0']);
+        $enrolpage = new enrol_page(
+            instance: $instance,
+            header: $this->get_instance_name($instance),
+            body: $OUTPUT->render($notification)
+        );
+        return $OUTPUT->render($enrolpage);
+    }
+
+    /**
+     * Returns enrol page.
+     * @param stdClass $instance
+     * @return string
+     */
+    public function render_enrol_page($instance) {
+        global $USER, $OUTPUT, $DB, $PAGE;  // Added $PAGE to global declarations.
+
         $course = $DB->get_record('course', ['id' => $instance->courseid]);
-
         $cost = ((float) $instance->cost <= 0) ? (float) $this->get_config('cost') : (float) $instance->cost;
-
         $name = $this->get_instance_name($instance);
         $cost = format_float($cost, 2, false);
 
-        // Check if current API keys can access the products/prices for this instance.
-        $validation = $this->validate_instance_accessibility($instance);
-        if (!$validation['accessible']) {
-            $notification = new notification(
-                get_string('paymentmethodnotfound', 'enrol_stripepayment'),
-                'error',
-                false
-            );
-            $notification->set_extra_classes(['mb-0']);
-            $enrolpage = new enrol_page(
-                instance: $instance,
-                header: $name,
-                body: $OUTPUT->render($notification)
-            );
-            return $OUTPUT->render($enrolpage);
-        }
-
-        // Prepare data for the template - always use the same template regardless of cost.
         $templatedata = [
             'currency' => $instance->currency,
             'cost' => format_float($cost, 2, true),
@@ -260,10 +242,8 @@ class enrol_stripepayment_plugin extends enrol_plugin {
             'enablecouponsection' => $this->get_config('enablecouponsection'),
         ];
 
-        // Render the payment form using the template.
         $body = $OUTPUT->render_from_template('enrol_stripepayment/enrol_page', $templatedata);
 
-        // Set up the required JavaScript for Stripe integration.
         $PAGE->requires->js_call_amd(
             'enrol_stripepayment/stripe_payment',
             'stripePayment',
@@ -274,7 +254,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
                 get_string('pleasewait', 'enrol_stripepayment'),
                 get_string('entercoupon', 'enrol_stripepayment'),
                 get_string('couponappling', 'enrol_stripepayment'),
-                get_string('paymenterror', 'enrol_stripepayment'),
+                get_string('couponapply', 'enrol_stripepayment'),
             ]
         );
 

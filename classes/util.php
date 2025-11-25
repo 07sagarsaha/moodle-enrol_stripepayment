@@ -191,17 +191,6 @@ class util {
         return $keys['secret'];
     }
 
-    // move to pro
-    // /**
-    //  * Get the current publishable key based on mode.
-    //  *
-    //  * @return string The appropriate publishable key
-    //  */
-    // public static function get_current_publishable_key() {
-    //     $keys = self::get_current_api_keys();
-    //     return $keys['publishable'];
-    // }  
-
     /**
      * Validate API keys for the current mode.
      *
@@ -280,8 +269,7 @@ class util {
     public static function stripe_api_request($operation, $resourceid = null, $data = null) {
         $endpointinfo = static::get_stripe_endpoint($operation, $resourceid);
         $method = $endpointinfo['method'];
-        $endpoint = $endpointinfo['endpoint'];
-        $url = 'https://api.stripe.com/v1/' . $endpoint;
+        $url = 'https://api.stripe.com/v1/' . $endpointinfo['endpoint'];
 
         $ch = curl_init();
 

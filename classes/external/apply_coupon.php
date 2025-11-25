@@ -59,20 +59,15 @@ class apply_coupon extends external_api {
     public static function execute_returns() {
         return new external_single_structure(
             [
-                'status' => new external_value(PARAM_RAW, 'status: true if success'),
-                'couponname' => new external_value(PARAM_RAW, 'coupon name', VALUE_OPTIONAL),
-                'discountdisplay' => new external_value(PARAM_RAW, 'discount display', VALUE_OPTIONAL),
-                'currency' => new external_value(PARAM_RAW, 'currency code', VALUE_OPTIONAL),
-                'discountamount' => new external_value(PARAM_RAW, 'discount amount', VALUE_OPTIONAL),
-                'uistate' => new external_value(PARAM_RAW, 'UI state: paid|error', VALUE_OPTIONAL),
-                'message' => new external_value(PARAM_RAW, 'provides message', VALUE_OPTIONAL),
+                'cost' => new external_value(PARAM_RAW, 'The cost of the course after applying the coupon'),
+                'couponname' => new external_value(PARAM_RAW, 'The name of the coupon'),
+                'discountdisplay' => new external_value(PARAM_RAW, 'The display text for the discount'),
+                'discountamount' => new external_value(PARAM_RAW, 'The amount of the discount'),
                 'showsections' => new external_single_structure(
                     [
-                        'paidenrollment' => new external_value(PARAM_BOOL, 'show payment button'),
-                        'discountsection' => new external_value(PARAM_BOOL, 'show discount section'),
-                    ],
-                    'sections to show/hide',
-                    VALUE_OPTIONAL
+                        'paidenrollment' => new external_value(PARAM_BOOL, 'Whether to show the paid enrollment section'),
+                        'discountsection' => new external_value(PARAM_BOOL, 'Whether to show the discount section'),
+                    ]
                 ),
             ]
         );
@@ -86,7 +81,34 @@ class apply_coupon extends external_api {
      */
     public static function execute($couponid, $instanceid) {
         global $DB;
+        $enrolinstance = $DB->get_record("enrol", ["id" => $instanceid, "status" => 0]);
 
+        if (!$enrolinstance) {
+            throw new moodle_exception('enrollmentinstancenotfound', 'enrol_stripepayment');
+        }
+
+        $coupon = self::validate_and_get_coupon($couponid, $instanceid);
+        $discount = self::calculate_discount($coupon, $enrolinstance);
+        $cost = $discount['cost'];
+        return [
+            'cost' => $discount['currency'] . ' ' . $cost,
+            'couponname' => $coupon['name'] ?? $couponid,
+            'discountdisplay' => $discount['discountdisplay'],
+            'discountamount' => '- ' . $discount['currency'] . ' ' . $discount['discountamount'],
+            'showsections' => [
+                'paidenrollment' => $cost > 0,
+                'discountsection' => ($discount['discountamount'] > 0) ,
+            ],
+        ];
+    }
+
+    /**
+     * function for validating coupon
+     * @param string $couponid
+     * @param int $instanceid
+     * @return array
+     */
+    private static function validate_and_get_coupon($couponid, $instanceid) {
         // Enhanced input validation.
         if (empty($couponid) || trim($couponid) === '') {
             throw new moodle_exception('couponcodeempty', 'enrol_stripepayment');
@@ -94,10 +116,6 @@ class apply_coupon extends external_api {
 
         if (!is_numeric($instanceid) || $instanceid <= 0) {
             throw new moodle_exception('invalidinstanceformat', 'enrol_stripepayment');
-        }
-        $enrolinstance = $DB->get_record("enrol", ["id" => $instanceid, "status" => 0]);
-        if (!$enrolinstance) {
-            throw new moodle_exception('enrollmentinstancenotfound', 'enrol_stripepayment');
         }
 
         // Validate Stripe configuration.
@@ -124,17 +142,22 @@ class apply_coupon extends external_api {
         ) {
             throw new moodle_exception('couponlimitexceeded', 'enrol_stripepayment');
         }
+        return $coupon;
+    }
 
-        $couponname = $coupon['name'] ?? $couponid;
-        $discountamount = 0;
-        $defaultcost = (float)util::get_core()->get_config('cost');
-        $cost = (float)$enrolinstance->cost > 0 ? (float)$enrolinstance->cost : $defaultcost;
+    /**
+     * function for calculating discount
+     * @param array $coupon
+     * @param object $enrolinstance
+     * @return array
+     */
+    private static function calculate_discount($coupon, $enrolinstance) {
+        $cost = (float)$enrolinstance->cost > 0 ? (float)$enrolinstance->cost : (float)util::get_core()->get_config('cost');
         $currency = $enrolinstance->currency ?: 'USD';
-
-        // Ensure currency matches.
         if (isset($coupon['currency']) && strtoupper($coupon['currency']) !== strtoupper($currency)) {
             throw new moodle_exception('couponcurrencymismatch', 'enrol_stripepayment');
         }
+        $discountamount = 0;
         if (isset($coupon['percent_off'])) {
             $discountamount = $cost * ($coupon['percent_off'] / 100);
             $cost -= $discountamount;
@@ -146,43 +169,21 @@ class apply_coupon extends external_api {
         } else {
             throw new moodle_exception('invalidcoupontype', 'enrol_stripepayment');
         }
-
-        // Ensure cost doesn't go negative.
         $cost = max(0, $cost);
         $cost = format_float($cost, 2, false);
         $discountamount = format_float($discountamount, 2, false);
-
         $minamount = util::minamount($currency);
-
-        // Calculate UI state for display purposes only.
-        $uistate = [
-            'state' => 'paid',
-            'errormessage' => '',
-            'showsections' => [
-                'paidenrollment' => true,
-                'discountsection' => ($discountamount > 0),
-            ],
-        ];
-
         if ($cost > 0 && $cost < $minamount) {
-            // Cost is above 0 but below minimum threshold - show error.
-            $uistate['state'] = 'error';
-            $uistate['errormessage'] = get_string('couponminimumerror', 'enrol_stripepayment', [
+            throw new moodle_exception('couponminimumerror', 'enrol_stripepayment', '', [
                 'amount' => $currency . ' ' . number_format($cost, 2),
                 'minimum' => $currency . ' ' . number_format($minamount, 2),
             ]);
-            $uistate['showsections']['paidenrollment'] = false;
         }
-
         return [
-            'status' => $cost,
-            'couponname' => $couponname,
+            'cost' => $cost,
             'discountdisplay' => $discountdisplay,
-            'currency' => $currency,
             'discountamount' => $discountamount,
-            'uistate' => $uistate['state'],
-            'message' => $uistate['state'] === 'error' ? $uistate['errormessage'] : 'Coupon applied successfully.',
-            'showsections' => $uistate['showsections']
+            'currency' => $currency,
         ];
     }
 }
