@@ -89,14 +89,14 @@ class apply_coupon extends external_api {
 
         $coupon = self::validate_and_get_coupon($couponid, $instanceid);
         $discount = self::calculate_discount($coupon, $plugininstance);
-        $cost = $discount['cost'];
+        $discountedcost = $discount['cost'];
         return [
-            'cost' => $discount['currency'] . ' ' . $cost,
+            'cost' => $discount['currency'] . ' ' . $discountedcost,
             'couponname' => $coupon['name'] ?? $couponid,
             'discountdisplay' => $discount['discountdisplay'],
             'discountamount' => '- ' . $discount['currency'] . ' ' . $discount['discountamount'],
             'showsections' => [
-                'paidenrollment' => $cost > 0,
+                'paidenrollment' => $discountedcost > 0,
                 'discountsection' => ($discount['discountamount'] > 0),
             ],
         ];
@@ -176,7 +176,7 @@ class apply_coupon extends external_api {
             ]);
         }
         return [
-            'cost' => $cost,
+            'discountedcost' => $cost,
             'discountdisplay' => $discountdisplay,
             'discountamount' => $discountamount,
             'currency' => $currency,

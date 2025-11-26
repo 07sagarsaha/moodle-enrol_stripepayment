@@ -176,7 +176,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
      * @return string
      */
     public function enrol_page_hook(stdClass $instance) {
-        global $USER, $OUTPUT, $DB, $PAGE;  // Added $PAGE to global declarations.
+        global $USER, $DB;  // Added $PAGE to global declarations.
 
         if (!util::can_more_user_enrol($instance)) {
             return $this->info_notification(get_string('maxenrolledreached', 'enrol_stripepayment'), $instance);
@@ -514,10 +514,6 @@ class enrol_stripepayment_plugin extends enrol_plugin {
             $errors['cost'] = get_string('costerror', 'enrol_paypal');
         }
 
-        // Handle cost field - it might be in a group called 'costar'.
-        $costvalue = null;
-        $costfieldexists = false;
-
         $validstatus = array_keys(util::get_status_options());
         $validcurrency = array_keys(util::get_currencies());
         $validroles = array_keys($this->get_roleid_options($instance, $context));
@@ -531,49 +527,24 @@ class enrol_stripepayment_plugin extends enrol_plugin {
             'enrolenddate' => PARAM_INT,
         ];
 
+        // Now validate the cost value.
+        $currency = $data['currency'] ?? 'USD';
+
+        // Minimum amounts for different currencies.
+        $minamount = util::minamount($currency);
+
+        // Check if cost is 0 or less (not allowed).
+        if ($cost <= 0) {
+            $errors['costar'] = get_string('costzeroerror', 'enrol_stripepayment');
+        } else if ($cost < $minamount) {
+            $errors['costar'] = get_string(
+                'costminimumerror',
+                'enrol_stripepayment',
+                $currency . ' ' . number_format($minamount, 2)
+            );
+        }
         $typeerrors = $this->validate_param_types($data, $tovalidate);
-
-        if (isset($data['costar']['cost'])) {
-            $costvalue = $data['costar']['cost'];
-            $costfieldexists = true;
-        } else if (isset($data['cost'])) {
-            $costvalue = $data['cost'];
-            $costfieldexists = true;
-        } else if (isset($data['costar']) && is_array($data['costar'])) {
-            // Check if costar is an array with numeric index.
-            if (isset($data['costar'][0])) {
-                $costvalue = $data['costar'][0];
-                $costfieldexists = true;
-            }
-        }
-
-        if ($costfieldexists) {
-            // Handle empty cost value (treat as 0).
-            if ($costvalue === '' || $costvalue === null) {
-                $cost = 0.0;
-            } else {
-                $cost = str_replace(get_string('decsep', 'langconfig'), '.', $costvalue);
-                $cost = (float)$cost;
-            }
-
-            // Now validate the cost value.
-            $currency = $data['currency'] ?? 'USD';
-
-            // Minimum amounts for different currencies.
-            $minamount = util::minamount($currency);
-
-            // Check if cost is 0 or less (not allowed).
-            if ($cost <= 0) {
-                $errors['costar'] = get_string('costzeroerror', 'enrol_stripepayment');
-            } else if ($cost < $minamount) {
-                $errors['costar'] = get_string(
-                    'costminimumerror',
-                    'enrol_stripepayment',
-                    $currency . ' ' . number_format($minamount, 2)
-                );
-            }
-        }
-        $errors = array_merge($errors, $typeerrors);
+        $errors = [...$errors, ...$typeerrors];
         return $errors;
     }
 

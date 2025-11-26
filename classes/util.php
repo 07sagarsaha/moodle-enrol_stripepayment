@@ -154,8 +154,7 @@ class util {
      * @return string 'test' or 'live'
      */
     public static function get_stripe_mode() {
-        $mode = get_config('enrol_stripepayment', 'stripemode');
-        return $mode ?: 'test'; // Default to test mode for safety.
+        return get_config('enrol_stripepayment', 'stripemode') ?: 'test'; // Default to test mode for safety.
     }
 
     /**
@@ -209,23 +208,16 @@ class util {
         }
 
         // Validate key format.
-        if (!empty($keys['secret'])) {
-            $expectedprefix = $keys['mode'] === 'live' ? 'sk_live_' : 'sk_test_';
-            if (strpos($keys['secret'], $expectedprefix) !== 0) {
-                $errors[] = get_string('errorinvalidsecretkeyformat', 'enrol_stripepayment', $keys['mode']);
-            }
+        if (strpos($keys['secret'], $keys['mode'] === 'live' ? 'sk_live_' : 'sk_test_') !== 0) {
+            $errors[] = get_string('errorinvalidsecretkeyformat', 'enrol_stripepayment', $keys['mode']);
         }
 
-        if (!empty($keys['publishable'])) {
-            $expectedprefix = $keys['mode'] === 'live' ? 'pk_live_' : 'pk_test_';
-            if (strpos($keys['publishable'], $expectedprefix) !== 0) {
-                $errors[] = get_string('errorinvalidpublishablekeyformat', 'enrol_stripepayment', $keys['mode']);
-            }
+        if (strpos($keys['publishable'], $keys['mode'] === 'live' ? 'pk_live_' : 'pk_test_') !== 0) {
+            $errors[] = get_string('errorinvalidpublishablekeyformat', 'enrol_stripepayment', $keys['mode']);
         }
 
         return [
             'valid' => empty($errors),
-            'errors' => $errors,
         ];
     }
 
@@ -241,7 +233,11 @@ class util {
         // Load language strings: moodle_stripepaymentpro.php (lang/en/)
         // 'status_live', 'status_test', 'status_config_error'.
         if (!$validation['valid']) {
-            $messagestr = get_string('statusconfigerror', 'enrol_stripepayment', strtoupper($mode));
+            $messagestr = get_string(
+                'statusconfigerror',
+                'enrol_stripepayment',
+                ['mode' => strtoupper($mode), 'errors' => implode(', ', $validation['errors'])]
+            );
             $color = '#d32f2f';
             $icon = '⚠️';
         } else if ($mode === 'live') {
