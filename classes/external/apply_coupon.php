@@ -109,7 +109,7 @@ class apply_coupon extends external_api {
      * @return array
      */
     private static function validate_and_get_coupon($couponid, $instanceid) {
-        // input validation.
+        // Input validation.
         if (empty($couponid) || trim($couponid) === '') {
             throw new moodle_exception('couponcodeempty', 'enrol_stripepayment');
         }

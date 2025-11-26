@@ -267,7 +267,6 @@ class util {
      * @throws moodle_exception If a cURL error occurs, Stripe returns a non-2xx response, or JSON decoding fails.
      */
     public static function stripe_api_request($operation, $resourceid = null, $data = null) {
-        
         $secretkey = self::get_current_secret_key();
         // Validate Stripe configuration.
         if (empty($secretkey)) {
