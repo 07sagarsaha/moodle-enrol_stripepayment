@@ -81,14 +81,14 @@ class apply_coupon extends external_api {
      */
     public static function execute($couponid, $instanceid) {
         global $DB;
-        $enrolinstance = $DB->get_record("enrol", ["id" => $instanceid, "status" => 0]);
+        $plugininstance = $DB->get_record("enrol", ["id" => $instanceid, "status" => 0]);
 
-        if (!$enrolinstance) {
+        if (!$plugininstance) {
             throw new moodle_exception('enrollmentinstancenotfound', 'enrol_stripepayment');
         }
 
         $coupon = self::validate_and_get_coupon($couponid, $instanceid);
-        $discount = self::calculate_discount($coupon, $enrolinstance);
+        $discount = self::calculate_discount($coupon, $plugininstance);
         $cost = $discount['cost'];
         return [
             'cost' => $discount['currency'] . ' ' . $cost,
@@ -97,7 +97,7 @@ class apply_coupon extends external_api {
             'discountamount' => '- ' . $discount['currency'] . ' ' . $discount['discountamount'],
             'showsections' => [
                 'paidenrollment' => $cost > 0,
-                'discountsection' => ($discount['discountamount'] > 0) ,
+                'discountsection' => ($discount['discountamount'] > 0),
             ],
         ];
     }
@@ -109,18 +109,14 @@ class apply_coupon extends external_api {
      * @return array
      */
     private static function validate_and_get_coupon($couponid, $instanceid) {
-        // Enhanced input validation.
+        // input validation.
         if (empty($couponid) || trim($couponid) === '') {
             throw new moodle_exception('couponcodeempty', 'enrol_stripepayment');
         }
 
+        // Validate instanceid.
         if (!is_numeric($instanceid) || $instanceid <= 0) {
             throw new moodle_exception('invalidinstanceformat', 'enrol_stripepayment');
-        }
-
-        // Validate Stripe configuration.
-        if (empty(util::get_current_secret_key())) {
-            throw new moodle_exception('stripeconfigurationincomplete', 'enrol_stripepayment');
         }
 
         $coupon = util::stripe_api_request('coupon_retrieve', $couponid);
@@ -148,12 +144,12 @@ class apply_coupon extends external_api {
     /**
      * function for calculating discount
      * @param array $coupon
-     * @param object $enrolinstance
+     * @param object $plugininstance
      * @return array
      */
-    private static function calculate_discount($coupon, $enrolinstance) {
-        $cost = (float)$enrolinstance->cost > 0 ? (float)$enrolinstance->cost : (float)util::get_core()->get_config('cost');
-        $currency = $enrolinstance->currency ?: 'USD';
+    private static function calculate_discount($coupon, $plugininstance) {
+        $cost = (float)$plugininstance->cost > 0 ? (float)$plugininstance->cost : (float)util::get_core()->get_config('cost');
+        $currency = $plugininstance->currency ?: 'USD';
         if (isset($coupon['currency']) && strtoupper($coupon['currency']) !== strtoupper($currency)) {
             throw new moodle_exception('couponcurrencymismatch', 'enrol_stripepayment');
         }

@@ -81,7 +81,7 @@ class process_enrolment extends external_api {
             'checkout_session_retrieve',
             $sessionid
         );
-        $chargeinfo       = self::extract_charge_info($checkoutsession);
+        $chargeinfo = self::extract_charge_info($checkoutsession);
 
         [$plugininstance, $course, $context, $user] =
             util::validate_data($userid, $instanceid);

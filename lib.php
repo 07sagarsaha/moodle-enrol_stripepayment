@@ -187,11 +187,16 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         }
 
         if ($instance->enrolstartdate != 0 && $instance->enrolstartdate > time()) {
-            return $this->info_notification(get_string('canntenrolearly', 'enrol_stripepayment', userdate($instance->enrolstartdate)), $instance);
+            return $this->info_notification(
+                get_string('canntenrolearly', 'enrol_stripepayment', userdate($instance->enrolstartdate)),
+                $instance);
         }
 
         if ($instance->enrolenddate != 0 && $instance->enrolenddate < time()) {
-            return $this->info_notification(get_string('canntenrollate', 'enrol_stripepayment', userdate($instance->enrolenddate)), $instance);
+            return $this->info_notification(
+                get_string('canntenrollate', 'enrol_stripepayment', userdate($instance->enrolenddate)),
+                $instance
+            );
         }
 
         if (!$this->validate_instance_accessibility($instance)['accessible']) {
@@ -199,7 +204,6 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         }
 
         return $this->render_enrol_page($instance);
-
     }
 
     /**

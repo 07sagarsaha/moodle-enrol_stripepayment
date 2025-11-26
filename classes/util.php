@@ -267,6 +267,12 @@ class util {
      * @throws moodle_exception If a cURL error occurs, Stripe returns a non-2xx response, or JSON decoding fails.
      */
     public static function stripe_api_request($operation, $resourceid = null, $data = null) {
+        
+        $secretkey = self::get_current_secret_key();
+        // Validate Stripe configuration.
+        if (empty($secretkey)) {
+            throw new moodle_exception('stripeconfigurationincomplete', 'enrol_stripepayment');
+        }
         $endpointinfo = static::get_stripe_endpoint($operation, $resourceid);
         $method = $endpointinfo['method'];
         $url = 'https://api.stripe.com/v1/' . $endpointinfo['endpoint'];
@@ -277,7 +283,7 @@ class util {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        curl_setopt($ch, CURLOPT_USERPWD, self::get_current_secret_key() . ':');
+        curl_setopt($ch, CURLOPT_USERPWD, $secretkey . ':');
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Content-Type: application/x-www-form-urlencoded',
         ]);

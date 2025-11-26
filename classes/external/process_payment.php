@@ -24,7 +24,6 @@
  */
 
  namespace enrol_stripepayment\external;
- use core\exception\moodle_exception;
  use core_external\external_api;
  use core_external\external_function_parameters;
  use core_external\external_value;
@@ -91,6 +90,57 @@ class process_payment extends external_api {
     }
 
     /**
+     * Get checkout session params
+     *
+     * @param int $userid User ID to enroll
+     * @param string $couponid Coupon code
+     * @param int $instanceid Instance ID
+     * @return array
+     */
+    private static function get_session_params($userid, $couponid, $instanceid) {
+        [$plugininstance, $course, $context, $user] = util::validate_data($userid, $instanceid);
+        $amount = util::get_stripe_amount($plugininstance->cost, $plugininstance->currency, false);
+        $coursename = format_string($course->fullname, true, ['context' => $context]);
+        $receiverid = self::get_stripe_customer_id($user);
+        $usertoken = util::get_core()->get_config('webservice_token');
+
+        $sessionparams = [
+            'customer' => $receiverid,
+            'payment_intent_data' => ['description' => get_string('intentdescription', 'enrol_stripepayment', $coursename)],
+            'payment_method_types' => ['card'],
+            'line_items' => [[
+                'price_data' => [
+                    'product_data' => [
+                        'name' => $coursename,
+                        'metadata' => ['pro_id' => $plugininstance->courseid],
+                        'description' => get_string('productdescription', 'enrol_stripepayment', $coursename),
+                    ],
+                    'unit_amount' => $amount,
+                    'currency' => $plugininstance->currency,
+                ],
+                'quantity' => 1,
+            ]],
+            'discounts' => [['coupon' => $couponid]],
+            'metadata' => [
+                'course_shortname' => format_string($course->shortname, true, ['context' => $context]),
+                'course_id' => $course->id,
+                'couponid' => $couponid,
+            ],
+            'mode' => 'payment',
+            'success_url' => new moodle_url('/webservice/rest/server.php', ['wstoken' => $usertoken])
+                . '&wsfunction=moodle_stripepayment_process_enrolment'
+                . '&moodlewsrestformat=json'
+                . '&sessionid={CHECKOUT_SESSION_ID}'
+                . '&userid=' . $userid
+                . '&couponid=' . $couponid
+                . '&instanceid=' . $instanceid,
+            'cancel_url' => new moodle_url('/course/view.php', ['id' => $plugininstance->courseid]),
+        ];
+
+        return $sessionparams;
+    }
+
+    /**
      * Get stripe customer id
      *
      * @param object $user User object
@@ -124,56 +174,5 @@ class process_payment extends external_api {
         }
 
         return $receiverid;
-    }
-
-    /**
-     * Get checkout session params
-     *
-     * @param int $userid User ID to enroll
-     * @param string $couponid Coupon code
-     * @param int $instanceid Instance ID
-     * @return array
-     */
-    private static function get_session_params($userid, $couponid, $instanceid) {
-        [$plugininstance, $course, $context, $user] = util::validate_data($userid, $instanceid);
-        $amount = util::get_stripe_amount($plugininstance->cost, $plugininstance->currency, false);
-        $description = format_string($course->fullname, true, ['context' => $context]);
-        $receiverid = self::get_stripe_customer_id($user);
-        $usertoken = util::get_core()->get_config('webservice_token');
-
-        $sessionparams = [
-            'customer' => $receiverid,
-            'payment_intent_data' => ['description' => $description],
-            'payment_method_types' => ['card'],
-            'line_items' => [[
-                'price_data' => [
-                    'product_data' => [
-                        'name' => $description,
-                        'metadata' => ['pro_id' => $plugininstance->courseid],
-                        'description' => $description,
-                    ],
-                    'unit_amount' => $amount,
-                    'currency' => $plugininstance->currency,
-                ],
-                'quantity' => 1,
-            ]],
-            'discounts' => [['coupon' => $couponid]],
-            'metadata' => [
-                'course_shortname' => format_string($course->shortname, true, ['context' => $context]),
-                'course_id' => $course->id,
-                'couponid' => $couponid,
-            ],
-            'mode' => 'payment',
-            'success_url' => new moodle_url('/webservice/rest/server.php', ['wstoken' => $usertoken])
-                . '&wsfunction=moodle_stripepayment_process_enrolment'
-                . '&moodlewsrestformat=json'
-                . '&sessionid={CHECKOUT_SESSION_ID}'
-                . '&userid=' . $userid
-                . '&couponid=' . $couponid
-                . '&instanceid=' . $instanceid,
-            'cancel_url' => new moodle_url('/course/view.php', ['id' => $plugininstance->courseid]),
-        ];
-
-        return $sessionparams;
     }
 }
