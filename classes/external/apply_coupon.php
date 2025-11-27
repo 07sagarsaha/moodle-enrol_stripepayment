@@ -59,13 +59,12 @@ class apply_coupon extends external_api {
     public static function execute_returns() {
         return new external_single_structure(
             [
-                'cost' => new external_value(PARAM_RAW, 'The cost of the course after applying the coupon'),
+                'discountedcost' => new external_value(PARAM_RAW, 'The cost of the course after applying the coupon'),
                 'couponname' => new external_value(PARAM_RAW, 'The name of the coupon'),
                 'discountdisplay' => new external_value(PARAM_RAW, 'The display text for the discount'),
                 'discountamount' => new external_value(PARAM_RAW, 'The amount of the discount'),
                 'showsections' => new external_single_structure(
                     [
-                        'paidenrollment' => new external_value(PARAM_BOOL, 'Whether to show the paid enrollment section'),
                         'discountsection' => new external_value(PARAM_BOOL, 'Whether to show the discount section'),
                     ]
                 ),
@@ -89,14 +88,14 @@ class apply_coupon extends external_api {
 
         $coupon = self::validate_and_get_coupon($couponid, $instanceid);
         $discount = self::calculate_discount($coupon, $plugininstance);
-        $discountedcost = $discount['cost'];
+        $discountedcost = $discount['discountedcost'];
+        
         return [
-            'cost' => $discount['currency'] . ' ' . $discountedcost,
+            'discountedcost' => $discount['currency'] . ' ' . $discountedcost,
             'couponname' => $coupon['name'] ?? $couponid,
             'discountdisplay' => $discount['discountdisplay'],
             'discountamount' => '- ' . $discount['currency'] . ' ' . $discount['discountamount'],
             'showsections' => [
-                'paidenrollment' => $discountedcost > 0,
                 'discountsection' => ($discount['discountamount'] > 0),
             ],
         ];

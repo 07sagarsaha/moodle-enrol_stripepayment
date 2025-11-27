@@ -108,7 +108,7 @@ function stripePayment(userid, couponid, instanceid, pleasewaitstring, entercoup
         DOM.setButton("apply", true, couponappling);
         try {
             const data = await applyCoupon(couponcode, instanceid);
-            if (data?.cost !== undefined) {
+            if (data?.discountedcost !== undefined) {
                 couponid = couponcode;
                 DOM.toggleElement("coupon", false);
                 DOM.toggleElement("apply", false);
@@ -137,11 +137,9 @@ function stripePayment(userid, couponid, instanceid, pleasewaitstring, entercoup
             if (data.discountdisplay) {
                 DOM.setElement("discountnote", data.discountdisplay);
             }
-            if (data.cost) {
-                DOM.setElement("totalamount", data.cost);
+            if (data.discountedcost) {
+                DOM.setElement("totalamount", data.discountedcost);
             }
-            DOM.toggleElement("enrolbutton", data.showsections.paidenrollment);
-            DOM.toggleElement("total", data.showsections.paidenrollment);
             displayMessage("showmessage", "", "success");
         }
         DOM.setButton("enrolbutton", false, "Enroll");
