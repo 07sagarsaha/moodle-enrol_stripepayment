@@ -34,6 +34,8 @@ use core_user;
 use moodle_url;
 use stdClass;
 
+use function DI\get;
+
 /**
  * Utility class for Stripe payment plugin
  *
@@ -83,6 +85,7 @@ class util {
 
         return
             get_string('enablewebservicesfirst', 'enrol_stripepayment') . ' ' .
+            get_string('enabledrestprotocol', 'enrol_stripepayment') . ' ' .
             self::generate_link_html($webservicesoverview) . ' . ' .
 
             get_string('createusertoken', 'enrol_stripepayment') . ' ' .
