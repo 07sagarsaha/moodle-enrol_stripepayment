@@ -161,8 +161,6 @@ function stripePayment(userid, couponid, instanceid, pleasewaitstring, entercoup
             }
         } catch (err) {
             displayMessage("paymentresponse", err.message, "error");
-        } finally {
-            DOM.toggleElement("enrolbutton", false);
         }
     };
 
