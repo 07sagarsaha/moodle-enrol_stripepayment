@@ -260,6 +260,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
                 get_string('entercoupon', 'enrol_stripepayment'),
                 get_string('couponappling', 'enrol_stripepayment'),
                 get_string('couponapply', 'enrol_stripepayment'),
+                get_string('couponappliedsuccessfully', 'enrol_stripepayment'),
             ]
         );
 

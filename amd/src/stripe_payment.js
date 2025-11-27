@@ -74,7 +74,7 @@ const createDOM = (instanceid) => {
     };
 };
 
-function stripePayment(userid, couponid, instanceid, pleasewaitstring, entercoupon, couponappling, couponapply) {
+function stripePayment(userid, couponid, instanceid, pleasewaitstring, entercoupon, couponappling, couponapply, couponsuccess) {
     const DOM = createDOM(instanceid);
     if (typeof window.Stripe === "undefined") {
         return;
@@ -140,7 +140,7 @@ function stripePayment(userid, couponid, instanceid, pleasewaitstring, entercoup
             if (data.discountedcost) {
                 DOM.setElement("totalamount", data.discountedcost);
             }
-            displayMessage("showmessage", "", "success");
+            displayMessage("showmessage", couponsuccess, "success");
         }
         DOM.setButton("enrolbutton", false, "Enroll");
     };
