@@ -29,9 +29,9 @@ const { call: fetchMany } = ajax;
 
 // Repository functions
 const applyCoupon = (couponid, instanceid) =>
-    fetchMany([{ methodname: "moodle_stripepayment_applycoupon", args: { couponid, instanceid } }])[0];
+    fetchMany([{ methodname: "moodle_stripepayment_apply_coupon", args: { couponid, instanceid } }])[0];
 
-const stripeEnrol = (userid, couponid, instanceid) =>
+const processPayment = (userid, couponid, instanceid) =>
     fetchMany([{ methodname: "moodle_stripepayment_process_payment", args: { userid, couponid, instanceid } }])[0];
 
 const createDOM = (instanceid) => {
@@ -151,7 +151,7 @@ function stripePayment(userid, couponid, instanceid, pleasewaitstring, entercoup
         clearError("paymentresponse");
         DOM.setButton("enrolbutton", true, pleasewaitstring);
         try {
-            const paymentdata = await stripeEnrol(userid, couponid, instanceid);
+            const paymentdata = await processPayment(userid, couponid, instanceid);
             if (paymentdata.error?.message) {
                 displayMessage("paymentresponse", paymentdata.error.message, "error");
             } else if (paymentdata.status === "success" && paymentdata.redirecturl) {

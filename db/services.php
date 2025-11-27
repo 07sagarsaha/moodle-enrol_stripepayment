@@ -27,7 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $services = ['moodle_enrol_stripepayment' => [
     'functions' => [
-            'moodle_stripepayment_applycoupon',
+            'moodle_stripepayment_apply_coupon',
             'moodle_stripepayment_process_enrolment',
             'moodle_stripepayment_process_payment',
         ],
@@ -37,7 +37,7 @@ $services = ['moodle_enrol_stripepayment' => [
         'shortname' => 'enrolstripepayment', ],
     ];
 $functions = [
-    'moodle_stripepayment_applycoupon' => [
+    'moodle_stripepayment_apply_coupon' => [
         'classname' => 'enrol_stripepayment\external\apply_coupon',
         'description' => 'Load coupon settings data',
         'type' => 'write',
@@ -55,7 +55,6 @@ $functions = [
         'classname' => 'enrol_stripepayment\external\process_enrolment',
         'description' => 'Update information after Stripe Successful Payment',
         'type' => 'write',
-        'ajax' => true,
         'loginrequired' => true,
     ],
 
