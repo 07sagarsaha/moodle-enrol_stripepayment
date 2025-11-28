@@ -34,8 +34,6 @@ use core_user;
 use moodle_url;
 use stdClass;
 
-use function DI\get;
-
 /**
  * Utility class for Stripe payment plugin
  *

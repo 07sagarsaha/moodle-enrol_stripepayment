@@ -63,11 +63,7 @@ class apply_coupon extends external_api {
                 'couponname' => new external_value(PARAM_RAW, 'The name of the coupon'),
                 'discountdisplay' => new external_value(PARAM_RAW, 'The display text for the discount'),
                 'discountamount' => new external_value(PARAM_RAW, 'The amount of the discount'),
-                'showsections' => new external_single_structure(
-                    [
-                        'discountsection' => new external_value(PARAM_BOOL, 'Whether to show the discount section'),
-                    ]
-                ),
+                'discountsection' => new external_value(PARAM_BOOL, 'Whether to show the discount section'),
             ]
         );
     }
@@ -95,9 +91,7 @@ class apply_coupon extends external_api {
             'couponname' => $coupon['name'] ?? $couponid,
             'discountdisplay' => $discount['discountdisplay'],
             'discountamount' => '- ' . $discount['currency'] . ' ' . $discount['discountamount'],
-            'showsections' => [
-                'discountsection' => ($discount['discountamount'] > 0),
-            ],
+            'discountsection' => ($discount['discountamount'] > 0),
         ];
     }
 
