@@ -149,15 +149,14 @@ class apply_coupon extends external_api {
         $discountamount = 0;
         if (isset($coupon['percent_off'])) {
             $discountamount = $cost * ($coupon['percent_off'] / 100);
-            $cost -= $discountamount;
             $discountdisplay = $coupon['percent_off'] . '%' . get_string('off', 'enrol_stripepayment');
         } else if (isset($coupon['amount_off'])) {
             $discountamount = $coupon['amount_off'] / 100;
-            $cost -= $discountamount;
             $discountdisplay = $currency . ' ' . $coupon['amount_off'] / 100 . ' ' . get_string('off', 'enrol_stripepayment');
         } else {
             throw new moodle_exception('invalidcoupontype', 'enrol_stripepayment');
         }
+        $cost -= $discountamount;
         $cost = max(0, $cost);
         $cost = format_float($cost, 2, false);
         $discountamount = format_float($discountamount, 2, false);
