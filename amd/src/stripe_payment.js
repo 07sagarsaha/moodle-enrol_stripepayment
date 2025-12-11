@@ -124,7 +124,7 @@ const stripePayment = (userid, couponid, instanceid) => {
         setButton("apply", true, localized.couponappling);
         try {
             const data = await applyCoupon(couponcode, instanceid);
-            if (data?.discountedcost !== undefined) {
+            if (data?.discountedprice !== undefined) {
                 couponid = couponcode;
                 toggleElement("coupon", false);
                 toggleElement("apply", false);
@@ -140,12 +140,12 @@ const stripePayment = (userid, couponid, instanceid) => {
         }
     };
     const updateUIFromServerResponse = (data) => {
-        toggleElement("discountsection", data.discountsection);
-        if (data.discountsection) {
+        toggleElement("displaydiscountsection", data.displaydiscountsection);
+        if (data.displaydiscountsection) {
             setElement("discounttag", data.couponname);
             setElement("discountamountdisplay", data.discountamount);
-            setElement("discountnote", data.discountdisplay);
-            setElement("totalamount", data.discountedcost);
+            setElement("discountnote", data.discountmessage);
+            setElement("totalamount", data.discountedprice);
             displayMessage("showmessage", localized.couponappliedsuccessfully, "success");
         }
         setButton("enrolbutton", false, localized.enrolnow);

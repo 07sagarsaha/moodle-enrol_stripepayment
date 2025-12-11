@@ -59,11 +59,11 @@ class apply_coupon extends external_api {
     public static function execute_returns() {
         return new external_single_structure(
             [
-                'discountedcost' => new external_value(PARAM_RAW, 'The cost of the course after applying the coupon'),
+                'displaydiscountsection' => new external_value(PARAM_BOOL, 'Whether to show the discount section'),
                 'couponname' => new external_value(PARAM_RAW, 'The name of the coupon'),
-                'discountdisplay' => new external_value(PARAM_RAW, 'The display text for the discount'),
                 'discountamount' => new external_value(PARAM_RAW, 'The amount of the discount'),
-                'discountsection' => new external_value(PARAM_BOOL, 'Whether to show the discount section'),
+                'discountedprice' => new external_value(PARAM_RAW, 'The cost of the course after applying the coupon'),
+                'discountmessage' => new external_value(PARAM_RAW, 'The display text for the discount'),
             ]
         );
     }
@@ -86,11 +86,11 @@ class apply_coupon extends external_api {
         $discount = self::calculate_discount($coupon, $plugininstance);
 
         return [
-            'discountedcost' => $discount['currency'] . ' ' . $discount['discountedcost'],
+            'displaydiscountsection' => ($discount['discountamount'] > 0),
             'couponname' => $coupon['name'] ?? $couponid,
-            'discountdisplay' => $discount['discountdisplay'],
             'discountamount' => '- ' . $discount['currency'] . ' ' . $discount['discountamount'],
-            'discountsection' => ($discount['discountamount'] > 0),
+            'discountedprice' => $discount['currency'] . ' ' . $discount['discountedprice'],
+            'discountmessage' => $discount['discountmessage'],
         ];
     }
 
@@ -148,10 +148,10 @@ class apply_coupon extends external_api {
         $discountamount = 0;
         if (isset($coupon['percent_off'])) {
             $discountamount = $cost * ($coupon['percent_off'] / 100);
-            $discountdisplay = $coupon['percent_off'] . '%' . get_string('off', 'enrol_stripepayment');
+            $discountmessage = $coupon['percent_off'] . '%' . get_string('off', 'enrol_stripepayment');
         } else if (isset($coupon['amount_off'])) {
             $discountamount = $coupon['amount_off'] / 100;
-            $discountdisplay = $currency . ' ' . $coupon['amount_off'] / 100 . ' ' . get_string('off', 'enrol_stripepayment');
+            $discountmessage = $currency . ' ' . $coupon['amount_off'] / 100 . ' ' . get_string('off', 'enrol_stripepayment');
         } else {
             throw new moodle_exception('invalidcoupontype', 'enrol_stripepayment');
         }
@@ -167,10 +167,10 @@ class apply_coupon extends external_api {
             ]);
         }
         return [
-            'discountedcost' => $cost,
-            'discountdisplay' => $discountdisplay,
-            'discountamount' => $discountamount,
             'currency' => $currency,
+            'discountamount' => $discountamount,
+            'discountedprice' => $cost,
+            'discountmessage' => $discountmessage,
         ];
     }
 }
