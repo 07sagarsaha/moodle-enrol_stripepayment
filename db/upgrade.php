@@ -160,5 +160,21 @@ function xmldb_enrol_stripepayment_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025082100, 'enrol', 'stripepayment');
     }
 
+    if ($oldversion < 2025082107) {
+        $table = new xmldb_table('enrol_stripepayment');
+        // Rename receiverid field to customerid.
+        $field = new xmldb_field('receiverid', XMLDB_TYPE_CHAR, '255', null, false, false);
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->rename_field($table, $field, 'customerid');
+        }
+        // Rename receiveremail field to customeremail.
+        $field = new xmldb_field('receiveremail', XMLDB_TYPE_CHAR, '255', null, false, false);
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->rename_field($table, $field, 'customeremail');
+        }
+
+        upgrade_plugin_savepoint(true, 2025082107, 'enrol', 'stripepayment');
+    }
+
     return true;
 }

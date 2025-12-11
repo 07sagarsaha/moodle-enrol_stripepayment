@@ -168,8 +168,8 @@ class process_enrolment extends external_api {
         $data->instanceid     = $plugininstance->id;
         $data->userid         = $user->id;
         $data->timeupdated    = time();
-        $data->receiveremail  = $user->email;
-        $data->receiverid     = $checkoutsession['customer'];
+        $data->customeremail  = $user->email;
+        $data->customerid     = $checkoutsession['customer'];
         $data->txnid          = $chargeinfo->txnid;
         $data->price          = $chargeinfo->charge ? ($chargeinfo->charge['amount'] / 100) : 0;
         $data->memo           = $chargeinfo->charge['payment_method'] ?? 'none';

@@ -101,11 +101,11 @@ class process_payment extends external_api {
         [$plugininstance, $course, $context, $user] = util::validate_data($userid, $instanceid);
         $amount = util::get_stripe_amount($plugininstance->cost, $plugininstance->currency, false);
         $coursename = format_string($course->fullname, true, ['context' => $context]);
-        $receiverid = self::get_stripe_customer_id($user);
+        $customerid = self::get_stripe_customer_id($user);
         $usertoken = util::get_core()->get_config('webservice_token');
 
         $sessionparams = [
-            'customer' => $receiverid,
+            'customer' => $customerid,
             'payment_intent_data' => ['description' => get_string('intentdescription', 'enrol_stripepayment', $coursename)],
             'payment_method_types' => ['card'],
             'line_items' => [[
@@ -148,14 +148,14 @@ class process_payment extends external_api {
      */
     public static function get_stripe_customer_id($user) {
         global $DB;
-        $customerrecord = $DB->get_record('enrol_stripepayment', ['receiveremail' => $user->email], '*', IGNORE_MISSING);
-        $receiverid = $customerrecord?->receiverid;
+        $customerrecord = $DB->get_record('enrol_stripepayment', ['customeremail' => $user->email], '*', IGNORE_MISSING);
+        $customerid = $customerrecord?->customerid;
 
-        if ($receiverid) {
+        if ($customerid) {
             try {
-                util::stripe_api_request('customer_retrieve', $receiverid);
+                util::stripe_api_request('customer_retrieve', $customerid);
             } catch (\Exception $e) {
-                $receiverid = null;
+                $customerid = null;
             }
         } else {
             $customers = util::stripe_api_request('customer_list', '', [
@@ -163,16 +163,16 @@ class process_payment extends external_api {
                 'limit' => 1,
             ]);
             if (!empty($customers['data'])) {
-                $receiverid = $customers['data'][0]['id'] ?? null;
+                $customerid = $customers['data'][0]['id'] ?? null;
             } else {
                 $newcustomer = util::stripe_api_request('customer_create', '', [
                     'email' => $user->email,
                     'name' => fullname($user),
                 ]);
-                $receiverid = $newcustomer['id'] ?? null;
+                $customerid = $newcustomer['id'] ?? null;
             }
         }
 
-        return $receiverid;
+        return $customerid;
     }
 }

@@ -63,8 +63,8 @@ class provider implements
         $collection->add_database_table(
             'enrol_stripepayment',
             [
-                'receiveremail'      => 'privacy:metadata:enrol_stripepayment:receiveremail',
-                'receiverid'         => 'privacy:metadata:enrol_stripepayment:receiverid',
+                'customeremail'      => 'privacy:metadata:enrol_stripepayment:customeremail',
+                'customerid'         => 'privacy:metadata:enrol_stripepayment:customerid',
                 'itemname'           => 'privacy:metadata:enrol_stripepayment:itemname',
                 'courseid'           => 'privacy:metadata:enrol_stripepayment:courseid',
                 'userid'             => 'privacy:metadata:enrol_stripepayment:userid',
@@ -98,7 +98,7 @@ class provider implements
                   FROM {enrol_stripepayment} esp
                   JOIN {enrol} e ON esp.instanceid = e.id
                   JOIN {context} ctx ON e.courseid = ctx.instanceid AND ctx.contextlevel = :contextcourse
-                  JOIN {user} u ON u.id = esp.userid OR LOWER(u.email) = esp.receiveremail
+                  JOIN {user} u ON u.id = esp.userid OR LOWER(u.email) = esp.customeremail
                  WHERE u.id = :userid";
         $params = [
             'contextcourse' => CONTEXT_COURSE,
@@ -125,7 +125,7 @@ class provider implements
         $sql = "SELECT u.id
                   FROM {enrol_stripepayment} esp
                   JOIN {enrol} e ON esp.instanceid = e.id
-                  JOIN {user} u ON esp.userid = u.id OR LOWER(u.email) = esp.receiveremail
+                  JOIN {user} u ON esp.userid = u.id OR LOWER(u.email) = esp.customeremail
                  WHERE e.courseid = :courseid";
         $params = ['courseid' => $context->instanceid];
 
@@ -152,7 +152,7 @@ class provider implements
                   FROM {enrol_stripepayment} esp
                   JOIN {enrol} e ON esp.instanceid = e.id
                   JOIN {context} ctx ON e.courseid = ctx.instanceid AND ctx.contextlevel = :contextcourse
-                  JOIN {user} u ON u.id = esp.userid OR LOWER(u.email) = esp.receiveremail
+                  JOIN {user} u ON u.id = esp.userid OR LOWER(u.email) = esp.customeremail
                  WHERE ctx.id {$contextsql} AND u.id = :userid
               ORDER BY e.courseid";
 
@@ -183,8 +183,8 @@ class provider implements
             }
 
             $transaction = (object) [
-                'receiveremail'         => $record->receiveremail,
-                'receiverid'            => $record->receiverid,
+                'customeremail'         => $record->customeremail,
+                'customerid'            => $record->customerid,
                 'itemname'              => $record->itemname,
                 'userid'                => $record->userid,
                 'couponid'              => $record->couponid,
@@ -259,9 +259,9 @@ class provider implements
         // We do not want to delete the payment record when the user is just the receiver of payment.
         // In that case, we just delete the receiver's info from the transaction record.
 
-        $select = "receiveremail = :receiveremail AND courseid $insql";
-        $params = $inparams + ['receiveremail' => \core_text::strtolower($user->email)];
-        $DB->set_field_select('enrol_stripepayment', 'receiveremail', '', $select, $params);
+        $select = "customeremail = :customeremail AND courseid $insql";
+        $params = $inparams + ['customeremail' => \core_text::strtolower($user->email)];
+        $DB->set_field_select('enrol_stripepayment', 'customeremail', '', $select, $params);
     }
 
     /**
@@ -290,7 +290,7 @@ class provider implements
         // We do not want to delete the payment record when the user is just the receiver of payment.
         // In that case, we just delete the receiver's info from the transaction record.
 
-        $select = "courseid = :courseid AND receiveremail IN (SELECT LOWER(email) FROM {user} WHERE id $usersql)";
-        $DB->set_field_select('enrol_stripepayment', 'receiveremail', '', $select, $params);
+        $select = "courseid = :courseid AND customeremail IN (SELECT LOWER(email) FROM {user} WHERE id $usersql)";
+        $DB->set_field_select('enrol_stripepayment', 'customeremail', '', $select, $params);
     }
 }

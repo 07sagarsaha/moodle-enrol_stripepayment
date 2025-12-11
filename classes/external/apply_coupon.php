@@ -155,21 +155,21 @@ class apply_coupon extends external_api {
         } else {
             throw new moodle_exception('invalidcoupontype', 'enrol_stripepayment');
         }
-        $cost -= $discountamount;
-        $cost = max(0, $cost);
-        $cost = format_float($cost, 2, false);
+        $discountedprice = $cost - $discountamount;
+        $discountedprice = max(0, $discountedprice);
+        $discountedprice = format_float($discountedprice, 2, false);
         $discountamount = format_float($discountamount, 2, false);
         $minamount = util::minamount($currency);
-        if ($cost > 0 && $cost < $minamount) {
+        if ($discountedprice > 0 && $discountedprice < $minamount) {
             throw new moodle_exception('couponminimumerror', 'enrol_stripepayment', '', [
-                'amount' => $currency . ' ' . number_format($cost, 2),
+                'amount' => $currency . ' ' . number_format($discountedprice, 2),
                 'minimum' => $currency . ' ' . number_format($minamount, 2),
             ]);
         }
         return [
             'currency' => $currency,
             'discountamount' => $discountamount,
-            'discountedprice' => $cost,
+            'discountedprice' => $discountedprice,
             'discountmessage' => $discountmessage,
         ];
     }
