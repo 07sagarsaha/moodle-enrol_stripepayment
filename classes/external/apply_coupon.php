@@ -19,7 +19,7 @@
  *
  * @package    enrol_stripepayment
  * @author     DualCube <admin@dualcube.com>
- * @copyright  2019 DualCube Team(https://dualcube.com)
+ * @copyright  2025 DualCube Team(https://dualcube.com)
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -37,7 +37,7 @@
   *
   * @package    enrol_stripepayment
   * @author     DualCube <admin@dualcube.com>
-  * @copyright  2019 DualCube Team(https://dualcube.com)
+  * @copyright  2025 DualCube Team(https://dualcube.com)
   * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
   */
 class apply_coupon extends external_api {
@@ -84,10 +84,9 @@ class apply_coupon extends external_api {
 
         $coupon = self::validate_and_get_coupon($couponid, $instanceid);
         $discount = self::calculate_discount($coupon, $plugininstance);
-        $discountedcost = $discount['discountedcost'];
 
         return [
-            'discountedcost' => $discount['currency'] . ' ' . $discountedcost,
+            'discountedcost' => $discount['currency'] . ' ' . $discount['discountedcost'],
             'couponname' => $coupon['name'] ?? $couponid,
             'discountdisplay' => $discount['discountdisplay'],
             'discountamount' => '- ' . $discount['currency'] . ' ' . $discount['discountamount'],
