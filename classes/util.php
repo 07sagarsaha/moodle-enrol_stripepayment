@@ -237,7 +237,7 @@ class util {
             $messagestr = get_string(
                 'statusconfigerror',
                 'enrol_stripepayment',
-                ['mode' => strtoupper($mode), 'errors' => implode(', ', $validation['errors'])]
+                ['mode' => strtoupper($mode), 'errors' => implode(', ', $validation['errors'] ?? [])]
             );
             $color = '#d32f2f';
             $icon = '⚠️';
