@@ -185,7 +185,7 @@ class process_enrolment extends external_api {
     /**
      * Validate payment status
      * @param array $checkoutsession
-     * @param object $data
+     * @param object $enrolmentdata
      */
     private static function validate_payment_status($checkoutsession, $enrolmentdata) {
         if (
