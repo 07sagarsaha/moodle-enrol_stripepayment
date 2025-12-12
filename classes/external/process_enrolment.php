@@ -24,6 +24,7 @@
  */
 
  namespace enrol_stripepayment\external;
+ use context_course;
  use core\exception\moodle_exception;
  use core_external\external_api;
  use core_external\external_function_parameters;
@@ -82,14 +83,14 @@ class process_enrolment extends external_api {
             $sessionid
         );
         $chargeinfo = self::extract_charge_info($checkoutsession);
-
-        [$plugininstance, $course, $context, $user] =
-            util::validate_data($userid, $instanceid);
-
+        $user = $DB->get_record("user", ["id" => $userid]);
+        $instance = $DB->get_record("enrol", ["id" => $instanceid, "status" => 0]);
+        $course = get_course($instance->courseid);
+        $context = context_course::instance($course->id);
         $enrolmentdata = self::prepare_enrollment_data(
             $chargeinfo,
             $couponid,
-            $plugininstance,
+            $instance,
             $course,
             $user,
             $checkoutsession
@@ -100,7 +101,7 @@ class process_enrolment extends external_api {
             try {
                 $DB->insert_record("enrol_stripepayment", $enrolmentdata);
 
-                self::enrol_user_to_course($plugininstance, $user);
+                self::enrol_user_to_course($instance, $user);
 
                 util::send_enrollment_notifications($course, $context, $user, util::get_core());
 
@@ -147,7 +148,7 @@ class process_enrolment extends external_api {
      * Prepare enrollment data
      * @param object $chargeinfo
      * @param number $couponid
-     * @param object $plugininstance
+     * @param object $instance
      * @param object $course
      * @param object $user
      * @param array $checkoutsession
@@ -156,7 +157,7 @@ class process_enrolment extends external_api {
     private static function prepare_enrollment_data(
         $chargeinfo,
         $couponid,
-        $plugininstance,
+        $instance,
         $course,
         $user,
         $checkoutsession
@@ -164,8 +165,8 @@ class process_enrolment extends external_api {
         $data = new stdClass();
 
         $data->couponid       = $couponid;
-        $data->courseid       = $plugininstance->courseid;
-        $data->instanceid     = $plugininstance->id;
+        $data->courseid       = $instance->courseid;
+        $data->instanceid     = $instance->id;
         $data->userid         = $user->id;
         $data->timeupdated    = time();
         $data->customeremail  = $user->email;
@@ -202,19 +203,19 @@ class process_enrolment extends external_api {
 
     /**
      * Enrol user to course
-     * @param object $plugininstance
+     * @param object $instance
      * @param object $user
      */
-    private static function enrol_user_to_course($plugininstance, $user) {
+    private static function enrol_user_to_course($instance, $user) {
         $timestart = time();
-        $timeend   = $plugininstance->enrolperiod
-            ? $timestart + $plugininstance->enrolperiod
+        $timeend   = $instance->enrolperiod
+            ? $timestart + $instance->enrolperiod
             : 0;
 
         util::get_core()->enrol_user(
-            $plugininstance,
+            $instance,
             $user->id,
-            $plugininstance->roleid,
+            $instance->roleid,
             $timestart,
             $timeend
         );

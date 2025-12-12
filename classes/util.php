@@ -445,54 +445,6 @@ class util {
     }
 
     /**
-     * validate plugininstance, course, user, context if validate then ok
-     * @param number $userid
-     * @param number $instanceid
-     * @return array
-     * else send message to admin
-     */
-    public static function validate_data($userid, $instanceid) {
-        global $DB;
-
-        // Validate enrolment instance.
-        if (!$plugininstance = $DB->get_record("enrol", ["id" => $instanceid, "status" => 0])) {
-            self::message_stripepayment_error_to_admin(
-                get_string('invalidinstance', 'enrol_stripepayment'),
-                ["id" => $plugininstance->courseid]
-            );
-            redirect(new moodle_url('/'));
-        }
-
-        // Validate course.
-        if (!$course = $DB->get_record("course", ["id" => $plugininstance->courseid])) {
-            self::message_stripepayment_error_to_admin(
-                get_string('invalidcourseid', 'enrol_stripepayment'),
-                ["id" => $plugininstance->courseid]
-            );
-            redirect(new moodle_url('/'));
-        }
-
-        // Validate context.
-        if (!$context = context_course::instance($course->id, IGNORE_MISSING)) {
-            self::message_stripepayment_error_to_admin(
-                get_string('invalidcontextid', 'enrol_stripepayment'),
-                ["id" => $course->id]
-            );
-            redirect(new moodle_url('/'));
-        }
-
-        // Validate user.
-        if (!$user = $DB->get_record("user", ["id" => $userid])) {
-            self::message_stripepayment_error_to_admin(
-                get_string('notvalidorderdetails', 'enrol_stripepayment'),
-                ["id" => $userid]
-            );
-            redirect(new moodle_url('/course/view.php', ['id' => $course->id]));
-        }
-        return [$plugininstance, $course, $context, $user];
-    }
-
-    /**
      * send error message to admin using Message API
      * @param string  $subject
      * @param array $data

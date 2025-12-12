@@ -29,6 +29,7 @@
  use core_external\external_value;
  use core_external\external_single_structure;
  use enrol_stripepayment\util;
+ use context_course;
  use moodle_url;
 
  /**
@@ -46,9 +47,15 @@ class process_payment extends external_api {
     public static function execute_parameters() {
         return new external_function_parameters(
             [
-                'userid' => new external_value(PARAM_INT, 'Update data user id'),
                 'couponid' => new external_value(PARAM_RAW, 'Update coupon id'),
-                'instanceid' => new external_value(PARAM_INT, 'Update instance id'),
+                'instance' => new external_single_structure(
+                    [
+                        'id' => new external_value(PARAM_INT),
+                        'cost' => new external_value(PARAM_INT),
+                        'currency' => new external_value(PARAM_RAW),
+                        'courseid' => new external_value(PARAM_INT),
+                    ]
+                )
             ]
         );
     }
@@ -74,13 +81,12 @@ class process_payment extends external_api {
     /**
      * process payment using stripe checkout session
      *
-     * @param int $userid User ID to enroll
      * @param string $couponid Coupon code
-     * @param int $instanceid Instance ID
+     * @param object $instance Instance
      * @return array
      */
-    public static function execute($userid, $couponid, $instanceid) {
-        $sessionparams = self::get_session_params($userid, $couponid, $instanceid);
+    public static function execute($couponid, $instance) {
+        $sessionparams = self::get_session_params($couponid, $instance);
         $session = util::stripe_api_request('checkout_session_create', '', $sessionparams);
         return [
             'status' => 'success',
@@ -92,18 +98,18 @@ class process_payment extends external_api {
     /**
      * Get checkout session params
      *
-     * @param int $userid User ID to enroll
      * @param string $couponid Coupon code
-     * @param int $instanceid Instance ID
+     * @param object $instance Instance
      * @return array
      */
-    private static function get_session_params($userid, $couponid, $instanceid) {
-        [$plugininstance, $course, $context, $user] = util::validate_data($userid, $instanceid);
-        $amount = util::get_stripe_amount($plugininstance->cost, $plugininstance->currency, false);
+    private static function get_session_params($couponid, $instance) {
+        global $USER;
+        $course = get_course($instance['courseid']);
+        $context = context_course::instance($course->id);
+        $amount = util::get_stripe_amount($instance['cost'], $instance['currency'], false);
         $coursename = format_string($course->fullname, true, ['context' => $context]);
-        $customerid = self::get_stripe_customer_id($user);
+        $customerid = self::get_stripe_customer_id($USER);
         $usertoken = util::get_core()->get_config('webservice_token');
-
         $sessionparams = [
             'customer' => $customerid,
             'payment_intent_data' => ['description' => get_string('intentdescription', 'enrol_stripepayment', $coursename)],
@@ -112,11 +118,11 @@ class process_payment extends external_api {
                 'price_data' => [
                     'product_data' => [
                         'name' => $coursename,
-                        'metadata' => ['pro_id' => $plugininstance->courseid],
+                        'metadata' => ['pro_id' => $instance['courseid']],
                         'description' => get_string('productdescription', 'enrol_stripepayment', $coursename),
                     ],
                     'unit_amount' => $amount,
-                    'currency' => $plugininstance->currency,
+                    'currency' => $instance['currency'],
                 ],
                 'quantity' => 1,
             ]],
@@ -131,10 +137,10 @@ class process_payment extends external_api {
                 . '&wsfunction=moodle_stripepayment_process_enrolment'
                 . '&moodlewsrestformat=json'
                 . '&sessionid={CHECKOUT_SESSION_ID}'
-                . '&userid=' . $userid
+                . '&userid=' . $USER->id
                 . '&couponid=' . $couponid
-                . '&instanceid=' . $instanceid,
-            'cancel_url' => new moodle_url('/course/view.php', ['id' => $plugininstance->courseid]),
+                . '&instanceid=' . $instance['id'],
+            'cancel_url' => new moodle_url('/course/view.php', ['id' => $instance['courseid']]),
         ];
 
         return $sessionparams;

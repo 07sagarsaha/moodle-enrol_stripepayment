@@ -48,7 +48,14 @@ class apply_coupon extends external_api {
         return new external_function_parameters(
             [
                 'couponid' => new external_value(PARAM_RAW, 'The coupon id to operate on'),
-                'instanceid' => new external_value(PARAM_RAW, 'Update instance id'),
+                'instance' => new external_single_structure(
+                    [
+                        'id' => new external_value(PARAM_INT),
+                        'cost' => new external_value(PARAM_INT),
+                        'currency' => new external_value(PARAM_RAW),
+                        'courseid' => new external_value(PARAM_INT),
+                    ]
+                )
             ]
         );
     }
@@ -71,19 +78,16 @@ class apply_coupon extends external_api {
     /**
      * function for couponsettings with validation
      * @param string $couponid
-     * @param int $instanceid
+     * @param object $instance
      * @return array
      */
-    public static function execute($couponid, $instanceid) {
-        global $DB;
-        $plugininstance = $DB->get_record("enrol", ["id" => $instanceid, "status" => 0]);
-
-        if (!$plugininstance) {
+    public static function execute($couponid, $instance) {
+        if (!$instance) {
             throw new moodle_exception('enrollmentinstancenotfound', 'enrol_stripepayment');
         }
 
-        $coupon = self::validate_and_get_coupon($couponid, $instanceid);
-        $discount = self::calculate_discount($coupon, $plugininstance);
+        $coupon = self::validate_and_get_coupon($couponid, $instance['id']);
+        $discount = self::calculate_discount($coupon, $instance);
 
         return [
             'displaydiscountsection' => ($discount['discountamount'] > 0),
@@ -136,12 +140,12 @@ class apply_coupon extends external_api {
     /**
      * function for calculating discount
      * @param array $coupon
-     * @param object $plugininstance
+     * @param object $instance
      * @return array
      */
-    private static function calculate_discount($coupon, $plugininstance) {
-        $cost = (float)$plugininstance->cost > 0 ? (float)$plugininstance->cost : (float)util::get_core()->get_config('cost');
-        $currency = $plugininstance->currency ?: 'USD';
+    private static function calculate_discount($coupon, $instance) {
+        $cost = (float)$instance['cost'] > 0 ? (float)$instance['cost'] : (float)util::get_core()->get_config('cost');
+        $currency = $instance['currency'] ?: 'USD';
         if (isset($coupon['currency']) && strtoupper($coupon['currency']) !== strtoupper($currency)) {
             throw new moodle_exception('couponcurrencymismatch', 'enrol_stripepayment');
         }

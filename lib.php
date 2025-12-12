@@ -176,7 +176,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
      * @return string
      */
     public function enrol_page_hook(stdClass $instance) {
-        global $USER, $DB;  // Added $PAGE to global declarations.
+        global $USER, $DB;
 
         if (!util::can_more_user_enrol($instance)) {
             return $this->info_notification(get_string('maxenrolledreached', 'enrol_stripepayment'), $instance);
@@ -231,7 +231,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
      * @return string
      */
     public function render_enrol_page($instance) {
-        global $USER, $OUTPUT, $DB, $PAGE;  // Added $PAGE to global declarations.
+        global $OUTPUT, $DB, $PAGE;  // Added $PAGE to global declarations.
 
         $course = $DB->get_record('course', ['id' => $instance->courseid]);
         $cost = ((float) $instance->cost <= 0) ? (float) $this->get_config('cost') : (float) $instance->cost;
@@ -248,14 +248,18 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         ];
 
         $body = $OUTPUT->render_from_template('enrol_stripepayment/enrol_page', $templatedata);
-
+        
         $PAGE->requires->js_call_amd(
             'enrol_stripepayment/stripe_payment',
             'stripePayment',
             [
-                $USER->id,
                 null, // Couponid starts as null.
-                $instance->id,
+                [
+                    'id' => $instance->id,
+                    'cost' => $instance->cost,
+                    'currency' => $instance->currency,
+                    'courseid' => $instance->courseid,
+                ],
             ]
         );
 
