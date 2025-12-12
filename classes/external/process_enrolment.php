@@ -77,7 +77,6 @@ class process_enrolment extends external_api {
      */
     public static function execute($sessionid, $userid, $couponid, $instanceid) {
         global $PAGE, $DB;
-
         $checkoutsession = util::stripe_api_request(
             'checkout_session_retrieve',
             $sessionid
@@ -188,14 +187,18 @@ class process_enrolment extends external_api {
      * @param array $checkoutsession
      * @param object $data
      */
-    private static function validate_payment_status($checkoutsession, $data) {
-        if ($checkoutsession['payment_status'] === 'paid') {
+    private static function validate_payment_status($checkoutsession, $enrolmentdata) {
+        if (
+            $checkoutsession['payment_status'] === 'paid'
+            && $checkoutsession['metadata']['courseid'] == $enrolmentdata->courseid
+            && $checkoutsession['metadata']['userid'] == $enrolmentdata->userid
+        ) {
             return true;
         }
 
         util::message_stripepayment_error_to_admin(
             "Payment status: " . $checkoutsession['payment_status'],
-            $data,
+            $enrolmentdata,
         );
 
         redirect(new moodle_url('/'));

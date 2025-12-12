@@ -248,7 +248,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         ];
 
         $body = $OUTPUT->render_from_template('enrol_stripepayment/enrol_page', $templatedata);
-        
+
         $PAGE->requires->js_call_amd(
             'enrol_stripepayment/stripe_payment',
             'stripePayment',

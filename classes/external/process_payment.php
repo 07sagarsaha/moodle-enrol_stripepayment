@@ -118,7 +118,7 @@ class process_payment extends external_api {
                 'price_data' => [
                     'product_data' => [
                         'name' => $coursename,
-                        'metadata' => ['pro_id' => $instance['courseid']],
+                        'metadata' => ['product_id' => $instance['courseid']],
                         'description' => get_string('productdescription', 'enrol_stripepayment', $coursename),
                     ],
                     'unit_amount' => $amount,
@@ -128,9 +128,10 @@ class process_payment extends external_api {
             ]],
             'discounts' => [['coupon' => $couponid]],
             'metadata' => [
-                'course_shortname' => format_string($course->shortname, true, ['context' => $context]),
-                'course_id' => $course->id,
+                'courseshortname' => format_string($course->shortname, true, ['context' => $context]),
+                'courseid' => $course->id,
                 'couponid' => $couponid,
+                'userid' => $USER->id,
             ],
             'mode' => 'payment',
             'success_url' => new moodle_url('/webservice/rest/server.php', ['wstoken' => $usertoken])
