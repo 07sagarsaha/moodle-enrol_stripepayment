@@ -55,7 +55,7 @@ class apply_coupon extends external_api {
                         'currency' => new external_value(PARAM_RAW),
                         'courseid' => new external_value(PARAM_INT),
                     ]
-                )
+                ),
             ]
         );
     }

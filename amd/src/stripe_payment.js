@@ -141,7 +141,7 @@ const stripePayment = (couponid, instance) => {
         }
     };
     const updateUIFromServerResponse = (data) => {
-        toggleElement("displaydiscountsection", data.displaydiscountsection);
+        toggleElement("discountsection", data.displaydiscountsection);
         if (data.displaydiscountsection) {
             setElement("discounttag", data.couponname);
             setElement("discountamountdisplay", data.discountamount);

@@ -179,7 +179,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         global $USER, $DB;
 
         if (!util::can_more_user_enrol($instance)) {
-            return $this->info_notification(get_string('maxenrolledreached', 'enrol_stripepayment'), $instance);
+            return $this->enrolment_page_message(get_string('maxenrolledreached', 'enrol_stripepayment'), $instance);
         }
 
         if ($DB->record_exists('user_enrolments', ['userid' => $USER->id, 'enrolid' => $instance->id])) {
@@ -187,21 +187,21 @@ class enrol_stripepayment_plugin extends enrol_plugin {
         }
 
         if ($instance->enrolstartdate != 0 && $instance->enrolstartdate > time()) {
-            return $this->info_notification(
+            return $this->enrolment_page_message(
                 get_string('canntenrolearly', 'enrol_stripepayment', userdate($instance->enrolstartdate)),
                 $instance
             );
         }
 
         if ($instance->enrolenddate != 0 && $instance->enrolenddate < time()) {
-            return $this->info_notification(
+            return $this->enrolment_page_message(
                 get_string('canntenrollate', 'enrol_stripepayment', userdate($instance->enrolenddate)),
                 $instance
             );
         }
 
         if (!$this->validate_instance_accessibility($instance)['accessible']) {
-            return $this->info_notification(get_string('paymentmethodnotfound', 'enrol_stripepayment'), $instance);
+            return $this->enrolment_page_message(get_string('paymentmethodnotfound', 'enrol_stripepayment'), $instance);
         }
 
         return $this->render_enrol_page($instance);
@@ -213,7 +213,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
      * @param stdClass $instance
      * @return string
      */
-    public function info_notification($message, $instance) {
+    public function enrolment_page_message($message, $instance) {
         global $OUTPUT;
         $notification = new notification($message, 'info', false);
         $notification->set_extra_classes(['mb-0']);
