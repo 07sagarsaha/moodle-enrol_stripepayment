@@ -98,12 +98,9 @@ class process_enrolment extends external_api {
         if (self::validate_payment_status($checkoutsession, $enrolmentdata)) {
             $PAGE->set_context($context);
             try {
-                $DB->insert_record("enrol_stripepayment", $enrolmentdata);
-
                 self::enrol_user_to_course($instance, $user);
-
+                $DB->insert_record("enrol_stripepayment", $enrolmentdata);
                 util::send_enrollment_notifications($course, $context, $user, util::get_core());
-
                 self::redirect_user_to_course($course, $context, $user);
             } catch (moodle_exception $e) {
                 util::message_stripepayment_error_to_admin($e->getMessage(), ['sessionid' => $sessionid]);
@@ -188,10 +185,12 @@ class process_enrolment extends external_api {
      * @param object $enrolmentdata
      */
     private static function validate_payment_status($checkoutsession, $enrolmentdata) {
+        global $DB;
         if (
             $checkoutsession['payment_status'] === 'paid'
             && $checkoutsession['metadata']['courseid'] == $enrolmentdata->courseid
             && $checkoutsession['metadata']['userid'] == $enrolmentdata->userid
+            && !$DB->record_exists('enrol_stripepaymentpro', ['txnid' => $enrolmentdata->txnid])
         ) {
             return true;
         }

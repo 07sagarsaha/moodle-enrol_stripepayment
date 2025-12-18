@@ -99,7 +99,7 @@ class process_payment extends external_api {
      * Get checkout session params
      *
      * @param string $couponid Coupon code
-     * @param object $instance Instance
+     * @param array $instance Instance
      * @return array
      */
     private static function get_session_params($couponid, $instance) {
