@@ -82,7 +82,7 @@ class process_enrolment extends external_api {
             $sessionid
         );
         $chargeinfo = self::extract_charge_info($checkoutsession);
-        $user = $DB->get_record("user", ["id" => $userid]);
+        $user = \core_user::get_user($userid);
         $instance = $DB->get_record("enrol", ["id" => $instanceid, "status" => 0]);
         $course = get_course($instance->courseid);
         $context = context_course::instance($course->id);
