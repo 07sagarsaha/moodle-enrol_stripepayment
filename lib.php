@@ -231,7 +231,7 @@ class enrol_stripepayment_plugin extends enrol_plugin {
      * @return string
      */
     public function render_enrol_page($instance) {
-        global $OUTPUT, $DB, $PAGE;  // Added $PAGE to global declarations.
+        global $OUTPUT, $PAGE;  // Added $PAGE to global declarations.
 
         $course = get_course($instance->courseid);
         $cost = ((float) $instance->cost <= 0) ? (float) $this->get_config('cost') : (float) $instance->cost;
