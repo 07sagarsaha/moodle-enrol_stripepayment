@@ -63,7 +63,6 @@ const processPayment = (couponid, instance) =>
     fetchMany([{ methodname: "moodle_stripepayment_process_payment", args: { couponid, instance } }])[0];
 
 const stripePayment = (couponid, instance) => {
-    console.log('stripePayment', couponid, instance);
     const cache = new Map();
     const getElement = (id) => {
         const fullid = `${id}-${instance['id']}`;
